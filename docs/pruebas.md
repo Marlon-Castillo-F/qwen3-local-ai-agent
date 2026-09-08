@@ -100,3 +100,20 @@ Para ejecutar:
 .venv/bin/python -m pytest -q
 RUN_LIVE_E2E=1 .venv/bin/python -m pytest -q
 ```
+
+## Validación posterior al reinicio
+
+Validación completada el `2026-09-08T17:20:53+00:00`.
+
+- Ubuntu inició a las `2026-09-08 17:16:24 UTC`, kernel `6.8.0-139-generic`, con `boot_id=d251b50a-a48e-43e2-af56-cbda9cd1b46b`.
+- `llama-server.service` apareció `enabled` y `active` sin intervención manual y quedó saludable tras terminar de cargar el modelo.
+- Existía exactamente una instancia, PID 1434, ejecutada por el usuario `llama` con PPID 1.
+- Socket exclusivo: `127.0.0.1:8080`.
+- `/health`: `{"status":"ok"}`.
+- `/v1/models`: `lmstudio-community/Qwen3-Coder-30B-A3B-Instruct-GGUF:Q4_K_M`.
+- `list_files` produjo un tool call real y devolvió `[DIR] proyecto-demo` y `[FILE] prueba.txt`; Qwen utilizó ambos nombres en su respuesta.
+- `read_file` produjo un tool call real, devolvió `Servidor de IA local` y Qwen utilizó ese contenido en su respuesta.
+- Suite completa live: `32 passed in 13.54s`; cero fallos y cero omisiones.
+- Git estaba limpio antes de esta actualización documental.
+- La clave `codex-ai-agent-temporary-2026-09-08` fue eliminada: conteo antes `1`, después `0`. El backup es `/home/soporte/.ssh/authorized_keys.pre-codex-removal-20260908T171511Z.bak`.
+- La reconexión posterior utilizó autenticación normal por contraseña con `PubkeyAuthentication=no`.
