@@ -1,155 +1,122 @@
-from pathlib import Path
+from __future__ import annotations
+
+import logging
+import time
+from typing import Any
 
 import requests
 
-
-API_BASE = "http://127.0.0.1:8080"
-API_URL = f"{API_BASE}/v1/chat/completions"
-
-MODEL_NAME = "Qwen3-Coder-30B-A3B-Instruct Q4_K_M"
-ENGINE = "llama.cpp"
-THREADS = 24
-CONTEXT_SIZE = 8192
-WORKSPACE = Path.home() / "ai-agent" / "workspace"
+from app.config import Settings
+from app.models import ChatResponse, ToolCall
 
 
-SYSTEM_MESSAGE = {
-    "role": "system",
-    "content": (
-        f"Eres un agente de IA local basado en {MODEL_NAME} ejecutado mediante {ENGINE} "
-        "dentro de Ubuntu Server "
-        "No eres Claude ChatGPT Gemini ni ningún otro modelo "
-        f"Si preguntan qué modelo utilizas responde {MODEL_NAME} mediante {ENGINE} "
-        "Ayudas con programación Linux SQL Server análisis de código pruebas y administración técnica "
-        "No inventes resultados de comandos archivos herramientas ni acciones "
-        "Si necesitas información real que no tienes debes indicarlo o solicitar una herramienta"
-    ),
-}
+class ModelConnectionError(RuntimeError):
+    pass
 
 
-def show_info():
-    print()
-    print("=== INFORMACIÓN DEL AGENTE ===")
-    print(f"Modelo configurado : {MODEL_NAME}")
-    print(f"Motor              : {ENGINE}")
-    print(f"API                : {API_BASE}")
-    print(f"Contexto           : {CONTEXT_SIZE} tokens")
-    print(f"Threads            : {THREADS}")
-    print(f"Workspace          : {WORKSPACE}")
+class ModelResponseError(RuntimeError):
+    pass
 
-    try:
-        response = requests.get(
-            f"{API_BASE}/v1/models",
-            timeout=5,
-        )
-        response.raise_for_status()
 
-        data = response.json()
+class LlamaClient:
+    def __init__(
+        self,
+        settings: Settings,
+        *,
+        session: requests.Session | None = None,
+        logger: logging.Logger | None = None,
+    ):
+        self.settings = settings
+        self.session = session or requests.Session()
+        self.logger = logger or logging.getLogger("ai_agent.client")
 
-        models = data.get("data") or data.get("models") or []
-
-        if models:
-            model = models[0]
-            detected = (
-                model.get("id")
-                or model.get("name")
-                or model.get("model")
-                or "Modelo detectado"
+    def model_info(self) -> dict[str, Any]:
+        try:
+            response = self.session.get(
+                f"{self.settings.api_base}/v1/models", timeout=5
             )
-            print("Estado del modelo   : CONECTADO")
-            print(f"Modelo detectado    : {detected}")
-        else:
-            print("Estado del modelo   : CONECTADO")
-            print("Modelo detectado    : respuesta recibida sin nombre")
+            response.raise_for_status()
+            payload = response.json()
+        except (requests.RequestException, ValueError) as exc:
+            raise ModelConnectionError(
+                f"No se pudo consultar llama-server: {exc}"
+            ) from exc
 
-    except requests.RequestException:
-        print("Estado del modelo   : DESCONECTADO")
+        models = payload.get("data") or payload.get("models") or []
+        detected = None
+        if models:
+            detected = (
+                models[0].get("id")
+                or models[0].get("name")
+                or models[0].get("model")
+            )
+        return {"connected": True, "detected_model": detected, "raw": payload}
 
-    print("==============================")
-    print()
-
-
-messages = [SYSTEM_MESSAGE]
-
-print("Agente IA local")
-print(f"Modelo: {MODEL_NAME}")
-print("Comandos: /info | /clear | /exit")
-print()
-
-while True:
-    try:
-        user_input = input("Tú> ").strip()
-
-        if not user_input:
-            continue
-
-        command = user_input.lower()
-
-        if command in {"/exit", "/quit"}:
-            print("Saliendo...")
-            break
-
-        if command == "/clear":
-            messages = [SYSTEM_MESSAGE]
-            print("Contexto limpiado")
-            print()
-            continue
-
-        if command == "/info":
-            show_info()
-            continue
-
-        messages.append(
-            {
-                "role": "user",
-                "content": user_input,
-            }
-        )
-
+    def chat(
+        self,
+        messages: list[dict[str, Any]],
+        tools: list[dict[str, Any]],
+    ) -> ChatResponse:
         payload = {
+            "model": self.settings.model_reference,
             "messages": messages,
+            "tools": tools,
+            "tool_choice": "auto",
+            "parallel_tool_calls": False,
             "temperature": 0.2,
             "max_tokens": 1024,
         }
-
-        response = requests.post(
-            API_URL,
-            json=payload,
-            timeout=300,
+        started = time.monotonic()
+        self.logger.info(
+            "model_request messages=%d tools=%d", len(messages), len(tools)
         )
+        try:
+            response = self.session.post(
+                f"{self.settings.api_base}/v1/chat/completions",
+                json=payload,
+                timeout=self.settings.request_timeout,
+            )
+            response.raise_for_status()
+            data = response.json()
+        except requests.Timeout as exc:
+            self.logger.error("model_timeout duration=%.3fs", time.monotonic() - started)
+            raise ModelConnectionError("El modelo agotó el tiempo de espera") from exc
+        except (requests.RequestException, ValueError) as exc:
+            self.logger.error(
+                "model_error duration=%.3fs type=%s",
+                time.monotonic() - started,
+                type(exc).__name__,
+            )
+            raise ModelConnectionError(f"Error consultando llama-server: {exc}") from exc
 
-        response.raise_for_status()
+        try:
+            choice = data["choices"][0]
+            message = choice["message"]
+        except (KeyError, IndexError, TypeError) as exc:
+            raise ModelResponseError("Respuesta inválida de llama-server") from exc
 
-        data = response.json()
-        answer = data["choices"][0]["message"]["content"]
+        calls: list[ToolCall] = []
+        for raw_call in message.get("tool_calls") or []:
+            function = raw_call.get("function") or {}
+            calls.append(
+                ToolCall(
+                    id=str(raw_call.get("id") or f"call_{len(calls)}"),
+                    name=str(function.get("name") or ""),
+                    arguments=function.get("arguments") or "{}",
+                )
+            )
 
-        messages.append(
-            {
-                "role": "assistant",
-                "content": answer,
-            }
+        duration = time.monotonic() - started
+        self.logger.info(
+            "model_response duration=%.3fs finish_reason=%s tool_calls=%d",
+            duration,
+            choice.get("finish_reason", ""),
+            len(calls),
         )
-
-        print()
-        print("IA>", answer)
-        print()
-
-    except requests.exceptions.ConnectionError:
-        print()
-        print("ERROR: No puedo conectar con llama-server en 127.0.0.1:8080")
-        print()
-
-    except requests.exceptions.Timeout:
-        print()
-        print("ERROR: El modelo tardó demasiado en responder")
-        print()
-
-    except KeyboardInterrupt:
-        print()
-        print("Saliendo...")
-        break
-
-    except Exception as e:
-        print()
-        print(f"ERROR: {e}")
-        print()
+        return ChatResponse(
+            content=message.get("content") or "",
+            tool_calls=calls,
+            finish_reason=choice.get("finish_reason") or "",
+            model=data.get("model") or "",
+            usage=data.get("usage") or {},
+        )
