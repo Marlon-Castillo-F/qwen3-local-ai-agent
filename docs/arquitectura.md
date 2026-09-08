@@ -1,46 +1,83 @@
 # Arquitectura
 
-## Flujo agentic
+Este documento describe las responsabilidades internas. Para una vista general, consulta el [README](../README.md).
 
-```text
-Usuario
-  -> app.main (CLI y comandos)
-  -> Agent.run
-  -> LlamaClient /v1/chat/completions + esquemas tools
-  -> Qwen devuelve tool_calls
-  -> ToolRegistry valida nombre y argumentos
-  -> handler seguro ejecuta la operación real
-  -> resultado role=tool vuelve a Qwen
-  -> Qwen redacta la respuesta final
+## Componentes y límites de confianza
+
+```mermaid
+flowchart TB
+    U[Usuario] --> CLI[app.main<br/>CLI y comandos]
+    CLI --> AG[app.agent<br/>estado y ciclo agentic]
+    AG --> CL[app.client<br/>HTTP compatible con OpenAI]
+    CL --> LS[llama-server<br/>localhost:8080]
+    LS --> Q[Qwen3-Coder]
+    Q -->|tool_calls estructurados| AG
+    AG --> TR[ToolRegistry]
+    TR -->|valida nombre y JSON| FT[Archivos]
+    TR --> GT[Git lectura]
+    TR --> TT[pytest allowlist]
+    FT --> WS[(workspace/)]
+    AG --> DB[(SQLite)]
+    AG --> LOG[(agent.log)]
+    TR -->|tool result| AG
+    AG -->|mensajes + resultados| CL
 ```
 
-No existe ejecución por nombre dinámico, `eval`, importación decidida por el modelo ni shell libre.
+La frontera principal está entre el texto generado por el modelo —no confiable— y `ToolRegistry`. Un tool call no otorga autoridad por sí mismo: el registro decide si el nombre existe, valida argumentos y ejecuta un handler fijo.
 
-## Componentes
+## Responsabilidades
 
-- `app/main.py`: CLI y comandos especiales.
-- `app/agent.py`: ciclo de herramientas, límite de rondas e historial.
-- `app/client.py`: cliente HTTP OpenAI compatible y consulta real de `/v1/models`.
-- `app/config.py`: configuración, rutas y system prompt.
-- `app/models.py`: estructuras de respuestas y tool calls.
-- `app/memory.py`: persistencia SQLite con censura básica de secretos.
-- `app/logging_config.py`: logging rotativo.
-- `app/tools/base.py`: registro explícito y validación de JSON.
-- `app/tools/files.py`: archivos limitados al workspace.
-- `app/tools/git_tools.py`: consultas Git sin mutaciones.
-- `app/tools/test_tools.py`: pytest con allowlist y timeout.
+| Módulo | Responsabilidad |
+|---|---|
+| `app/main.py` | Bucle interactivo y comandos `/info`, `/help`, `/history`, `/clear`, `/exit` |
+| `app/agent.py` | Historial enviado al modelo, rondas de herramientas y eventos visibles |
+| `app/client.py` | `/v1/models`, `/v1/chat/completions`, timeouts y validación de respuestas |
+| `app/config.py` | Rutas, límites, identidad y system prompt |
+| `app/models.py` | Tipos internos para respuestas y tool calls |
+| `app/memory.py` | Persistencia SQLite por `session_id` y censura básica |
+| `app/logging_config.py` | Rotación y formato de logs |
+| `app/tools/base.py` | Registro, esquema OpenAI y validación de argumentos |
+| `app/tools/files.py` | Operaciones seguras dentro del workspace |
+| `app/tools/git_tools.py` | `git status` y `git diff` sin mutaciones |
+| `app/tools/test_tools.py` | Ejecución de pytest mediante allowlist |
 
-## Directorios
+## Secuencia de una herramienta
+
+```mermaid
+sequenceDiagram
+    participant U as Usuario
+    participant A as Agente Python
+    participant Q as Qwen vía llama-server
+    participant R as ToolRegistry
+    participant H as Handler
+    U->>A: Pregunta sobre un archivo
+    A->>Q: messages + tools
+    Q-->>A: tool_call(name, arguments)
+    A->>R: validar y ejecutar
+    R->>H: argumentos aceptados
+    H-->>R: resultado real
+    R-->>A: tool result
+    A->>Q: messages + role=tool
+    Q-->>A: respuesta final
+    A-->>U: respuesta y evidencia visible
+```
+
+## Separación operativa
+
+- El agente es interactivo y se inicia manualmente como usuario normal.
+- Solo `llama-server` es persistente y está administrado por systemd.
+- El servicio usa el usuario sin shell `llama`; no comparte privilegios con el cliente.
+- El modelo y el runtime están fuera del repositorio y el GGUF está excluido por `.gitignore`.
+- SQLite y logs son datos de ejecución locales, también excluidos de Git.
+
+## Estructura resumida
 
 ```text
-/home/soporte/ai-agent/
+ai-agent/
 ├── app/
 │   └── tools/
-├── data/
 ├── deploy/
 ├── docs/
-├── logs/
-├── reports/
 ├── tests/
 ├── workspace/
 ├── requirements.txt
@@ -48,6 +85,4 @@ No existe ejecución por nombre dinámico, `eval`, importación decidida por el 
 └── README.md
 ```
 
-## Inferencia
-
-`llama-server.service` ejecuta `/opt/llama.cpp/build/bin/llama-server` como `llama`. El modelo se abre desde `/var/lib/llama/models/Qwen3-Coder-30B-A3B-Instruct-Q4_K_M.gguf`, con alias API estable, 24 threads, 24 batch threads, contexto 8192 y un slot.
+Consulta también [Tool calling](tool-calling.md), [Seguridad](seguridad.md) y [Decisiones](decisiones.md).

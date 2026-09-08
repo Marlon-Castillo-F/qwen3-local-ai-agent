@@ -1,37 +1,59 @@
-# Problemas encontrados
+# Problemas encontrados y aprendizajes
 
-## Identidad incorrecta
+## Identidad incorrecta del modelo
 
-Qwen se había identificado como Claude 3.5 Sonnet. El system prompt fija la identidad correcta y `/info` consulta configuración y `/v1/models`, sin confiar en una afirmación generada.
+Qwen llegó a identificarse como Claude 3.5 Sonnet. Una respuesta generativa no es una fuente confiable de identidad.
 
-## Conversaciones largas
+**Solución:** system prompt explícito y `/info` construido con configuración local y la respuesta real de `/v1/models`.
 
-El contexto acumulado redujo el rendimiento. `/clear` inicia una sesión nueva y reduce el prompt enviado, mientras SQLite conserva sesiones anteriores.
+## Tool calling aparentemente ausente
 
-## NUMA
+El modelo respondía que no podía acceder al filesystem. La causa no era incompatibilidad: el cliente prototipo no enviaba `tools`, no procesaba `tool_calls` y no devolvía `role=tool`.
 
-`--numa distribute` redujo el procesamiento de prompt observado de 27,4 a 14,4 tok/s con 24 threads. La configuración final no lo usa.
+**Diagnóstico:** una petición directa a `/v1/chat/completions` produjo un tool call válido.
 
-## Tool calling ausente en el prototipo
-
-El prototipo separaba las definiciones de herramientas del bucle principal. `client.py` no enviaba `tools` ni procesaba `tool_calls`, por lo que el modelo respondía texto normal. El cliente y el ciclo agentic fueron reestructurados.
+**Solución:** implementar el ciclo completo y mantener la validación en Python.
 
 ## Puerto 8080 ocupado
 
-Una instancia manual previa ejecutada como root ocupaba el puerto. Se identificó exactamente, se mantuvo durante el desarrollo y solo se terminó con SIGTERM después de validar la instancia no-root en 8081. Terminó en ocho segundos.
+Un intento de iniciar otra instancia falló porque el puerto ya pertenecía a un servidor manual. Se identificaron PID, usuario, comando y socket antes de detener nada.
 
-## RUNPATH hacia `/root`
+**Aprendizaje:** diagnosticar ownership y procedencia del proceso evita terminar servicios equivocados.
 
-La copia del ejecutable conservaba `/root/llama.cpp/build/bin` como RUNPATH. Se resolvió con `LD_LIBRARY_PATH` apuntando al runtime root-owned de `/opt`, sin abrir permisos de `/root`.
+## Runtime dentro de `/root`
 
-## Memoria durante validación paralela
+El binario y sus bibliotecas dependían de una ruta que un usuario de servicio no podía atravesar. Además, el ejecutable conservaba esa ruta en RUNPATH.
 
-Al cargar temporalmente servidores en 8080 y 8081, el swap alcanzó 5,4 GiB. La instancia duplicada se cerró inmediatamente después de las pruebas. El servicio final único usa alrededor de 13,7 GB según systemd.
+**Solución:** runtime root-owned en `/opt`, bibliotecas seleccionadas mediante `LD_LIBRARY_PATH` acotado y modelo presentado bajo `/var/lib/llama`.
 
-## Fallos iniciales de tests
+## NUMA distribute redujo el prompt
 
-Dos pruebas fallaron porque `ChatResponse.content` era obligatorio aunque un tool call válido puede traer contenido vacío. Se hizo opcional con valor `""`; todas las pruebas posteriores pasaron.
+Con 24 threads, `--numa distribute` bajó el procesamiento aproximado de 27,4 a 14,4 tok/s, mientras la generación permaneció cerca de 10 tok/s.
 
-## Respaldo
+**Solución:** 24 threads sin NUMA distribute.
 
-El primer comando de respaldo falló antes de crear un archivo válido porque PowerShell expandió variables destinadas al shell remoto. Se repitió con rutas absolutas y se verificó el archivo mediante SHA-256 y listado interno.
+## Conversaciones largas
+
+El crecimiento del contexto aumentó el coste de procesamiento de prompt.
+
+**Solución:** `/clear` inicia una sesión limpia; SQLite conserva el historial sin reenviarlo completo al modelo.
+
+## Respuestas de herramienta sin contenido textual
+
+Dos tests iniciales fallaron porque el tipo interno exigía `content`, aunque una respuesta válida con `finish_reason=tool_calls` puede traer una cadena vacía.
+
+**Solución:** aceptar `content=""` y conservar los tool calls como señal principal.
+
+## Tiempo de arranque
+
+Después del reboot, la instancia CPU-only tarda aproximadamente 1 minuto 45 segundos en cargar el GGUF. systemd inicia el proceso correctamente antes de que `/health` esté listo.
+
+**Aprendizaje:** distinguir proceso activo de aplicación saludable y usar health checks con espera acorde al tamaño del modelo.
+
+## Validación con dos instancias
+
+Durante la migración se utilizó temporalmente otro puerto para validar el runtime no-root sin interrumpir el servidor original. La carga simultánea elevó el uso de memoria y swap.
+
+**Solución:** ejecutar solo las pruebas necesarias, cerrar la instancia temporal y mantener una única instancia final.
+
+Consulta [Decisiones técnicas](decisiones.md) y [Pruebas](pruebas.md).
