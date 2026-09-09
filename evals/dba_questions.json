@@ -53,8 +53,8 @@
     {
       "id": "statistics-io",
       "question": "STATISTICS IO muestra Scan count 1, logical reads 120000, physical reads 0 y read-ahead reads 0. Explica qué puede concluirse y qué no puede concluirse solo con esos datos.",
-      "required_concepts": [["logical reads", "lecturas lógicas"], ["physical reads", "lecturas físicas"], ["cache", "buffer"], ["no", "insuficiente", "más evidencia"]],
-      "forbidden_claims": ["physical reads 0 significa que la consulta es eficiente", "scan count 1 demuestra un table scan"]
+      "required_concepts": [["logical reads", "lecturas lógicas"], ["physical reads", "lecturas físicas"], ["cache", "buffer"], ["no identifica el operador", "no permite identificar el operador", "plan de ejecución"]],
+      "forbidden_claims": ["physical reads 0 significa que la consulta es eficiente", "scan count 1 demuestra un table scan", "indica que se realizó un escaneo completo", "el escaneo fue completo", "no un seek"]
     },
     {
       "id": "statistics-time",
@@ -125,8 +125,8 @@
     {
       "id": "spill-warning",
       "question": "Un Actual Execution Plan muestra un Hash Match con spill a tempdb. Explica qué hechos aporta esa advertencia, causas posibles y qué medirías antes de cambiar memoria, índices o consulta.",
-      "required_concepts": [["spill"], ["tempdb"], ["memory grant", "concesión de memoria"], ["cardinalidad", "statistics", "estadísticas"], ["actual", "runtime", "ejecución"]],
-      "forbidden_claims": ["todo hash match debe reemplazarse", "un spill siempre se arregla creando un índice"]
+      "required_concepts": [["spill"], ["tempdb"], ["memory grant", "concesión de memoria"], ["cardinalidad", "statistics", "estadísticas"], ["statistics xml", "actual execution plan", "plan real"], ["showplan_xml", "plan estimado", "no ejecuta"]],
+      "forbidden_claims": ["todo hash match debe reemplazarse", "un spill siempre se arregla creando un índice", "plan real con set showplan_xml", "plan real con `set showplan_xml", "actual execution plan con set showplan_xml"]
     },
     {
       "id": "seek-with-lookups",

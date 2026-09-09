@@ -7,7 +7,7 @@ consulted: 2026-09-09
 
 ## Summary
 
-An execution plan is a tree of physical operators selected to implement a query. Read data flow and operator properties, not only icons. Important facts include predicates, estimated and actual rows, executions, ordered properties, memory grant, warnings, object and index names, and runtime counters when present.
+An execution plan is a tree of physical operators selected to implement a query. Read data flow and operator properties, not only icons. Important facts include predicates, estimated and actual rows, executions, ordered properties, memory grant, warnings, object and index names, and runtime counters when present. Only the plan can identify physical operators such as Table Scan, Index Scan, Index Seek and Key Lookup; `STATISTICS IO` scan count cannot.
 
 ## Key concepts
 
@@ -16,6 +16,8 @@ An execution plan is a tree of physical operators selected to implement a query.
 - Merge Join can exploit compatible ordering and may avoid hashing.
 - Spills show that an operation used tempdb; investigate estimates, memory and row width.
 - Missing-index suggestions omit important workload-wide trade-offs.
+- `SET SHOWPLAN_XML ON` and Estimated Execution Plan in SSMS do not execute the query and produce an estimated plan.
+- Include Actual Execution Plan in SSMS (`Ctrl+M`) and `SET STATISTICS XML ON` execute the query and return runtime plan information. `SET STATISTICS PROFILE ON` is a tabular alternative when appropriate.
 
 ## Common mistakes
 

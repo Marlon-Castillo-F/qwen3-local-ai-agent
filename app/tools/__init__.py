@@ -144,7 +144,7 @@ def build_registry(
     for name, description, handler in (
         (
             "analyze_statistics_io",
-            "Extrae hechos estructurados de una salida SET STATISTICS IO proporcionada como texto o archivo del workspace.",
+            "Extrae hechos estructurados de una salida SET STATISTICS IO proporcionada como texto o archivo del workspace. Scan count no identifica un operador físico; solo un plan de ejecución aporta esa evidencia.",
             analyze_statistics_io,
         ),
         (

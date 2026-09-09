@@ -46,9 +46,27 @@ def evaluate_answer(answer: str, question: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def run_evaluation(questions_path: Path, output_path: Path, label: str) -> dict[str, Any]:
+def select_questions(
+    questions: list[dict[str, Any]], question_ids: list[str] | None
+) -> list[dict[str, Any]]:
+    if not question_ids:
+        return questions
+    requested = set(question_ids)
+    available = {question["id"] for question in questions}
+    unknown = sorted(requested - available)
+    if unknown:
+        raise ValueError(f"IDs de evaluación desconocidos: {', '.join(unknown)}")
+    return [question for question in questions if question["id"] in requested]
+
+
+def run_evaluation(
+    questions_path: Path,
+    output_path: Path,
+    label: str,
+    question_ids: list[str] | None = None,
+) -> dict[str, Any]:
     definition = json.loads(questions_path.read_text(encoding="utf-8"))
-    questions = definition["questions"]
+    questions = select_questions(definition["questions"], question_ids)
     base_settings = Settings()
     started = time.monotonic()
     results: list[dict[str, Any]] = []
@@ -153,8 +171,19 @@ def main() -> int:
     )
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--label", required=True)
+    parser.add_argument(
+        "--question-id",
+        action="append",
+        dest="question_ids",
+        help="Ejecuta solo este ID; puede repetirse y conserva el orden del archivo.",
+    )
     args = parser.parse_args()
-    payload = run_evaluation(args.questions, args.output, args.label)
+    payload = run_evaluation(
+        args.questions,
+        args.output,
+        args.label,
+        question_ids=args.question_ids,
+    )
     print(json.dumps(payload["summary"], ensure_ascii=False, indent=2))
     return 0
 

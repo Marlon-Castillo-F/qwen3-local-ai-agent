@@ -57,6 +57,15 @@ def test_statistics_io_parsing(tmp_path: Path):
             "read_ahead_reads": 8,
         }
     ]
+    assert result["interpretation_constraints"] == {
+        "physical_operator_known": False,
+        "requires_execution_plan_for_operator": True,
+        "note": (
+            "STATISTICS IO scan count no identifica Table Scan, Index Scan, "
+            "Index Seek ni Key Lookup; esos operadores requieren evidencia "
+            "del plan de ejecución."
+        ),
+    }
 
 
 def test_statistics_io_does_not_invent_missing_fields(tmp_path: Path):

@@ -76,7 +76,20 @@ def analyze_statistics_io(
                 item[field] = int(value.group(1))
         tables.append(item)
     return json.dumps(
-        {"source": source, "tables": tables, "table_count": len(tables)},
+        {
+            "source": source,
+            "tables": tables,
+            "table_count": len(tables),
+            "interpretation_constraints": {
+                "physical_operator_known": False,
+                "requires_execution_plan_for_operator": True,
+                "note": (
+                    "STATISTICS IO scan count no identifica Table Scan, Index Scan, "
+                    "Index Seek ni Key Lookup; esos operadores requieren evidencia "
+                    "del plan de ejecución."
+                ),
+            },
+        },
         ensure_ascii=False,
         indent=2,
     )
