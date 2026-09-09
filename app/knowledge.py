@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import re
 import sqlite3
+import unicodedata
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -10,6 +11,24 @@ from typing import Any
 
 _FRONT_MATTER = re.compile(r"\A---\s*\n(.*?)\n---\s*\n", re.DOTALL)
 _TOKEN = re.compile(r"[\w][\w.+#-]*", re.UNICODE)
+_SYNONYMS = {
+    "administracion": ("administration", "dba"),
+    "autenticacion": ("authentication",),
+    "autorizacion": ("authorization", "permissions"),
+    "bloqueo": ("blocking", "lock"),
+    "busqueda": ("seek",),
+    "cardinalidad": ("cardinality",),
+    "copia": ("backup",),
+    "escaneo": ("scan",),
+    "estadisticas": ("statistics",),
+    "estimacion": ("estimation", "estimated"),
+    "indice": ("index",),
+    "interbloqueo": ("deadlock",),
+    "lecturas": ("reads", "io"),
+    "permisos": ("permissions", "security"),
+    "restauracion": ("restore", "recovery"),
+    "usuario": ("user", "principal"),
+}
 
 
 @dataclass(frozen=True)
@@ -110,10 +129,20 @@ class KnowledgeIndex:
 
     @staticmethod
     def _match_expression(query: str) -> str:
-        terms = _TOKEN.findall(query.casefold())
+        normalized = "".join(
+            character
+            for character in unicodedata.normalize("NFKD", query.casefold())
+            if not unicodedata.combining(character)
+        )
+        terms = _TOKEN.findall(normalized)
         if not terms:
             raise ValueError("La consulta de conocimiento está vacía")
-        unique = list(dict.fromkeys(terms))[:20]
+        expanded = [
+            candidate
+            for term in terms
+            for candidate in (term, *_SYNONYMS.get(term, ()))
+        ]
+        unique = list(dict.fromkeys(expanded))[:30]
         return " OR ".join(f'"{term.replace(chr(34), "")}"*' for term in unique)
 
     def search(self, query: str, top_k: int = 5) -> str:

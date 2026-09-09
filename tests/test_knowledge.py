@@ -36,6 +36,8 @@ def test_indexes_and_retrieves_corpus(tmp_path: Path):
     result = json.loads(index.search("key lookup covering", top_k=1))
     assert result["results"][0]["document"] == "indexing.md"
     assert result["results"][0]["source"].startswith("https://learn.microsoft.com/")
+    spanish = json.loads(index.search("diseño de índice", top_k=2))
+    assert spanish["results"][0]["document"] == "indexing.md"
     assert index.stats() == {
         "documents": 2,
         "categories": ["backup-restore", "indexing"],
