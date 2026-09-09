@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ShowPlanXML xmlns="http://schemas.microsoft.com/sqlserver/2004/07/showplan" Version="1.0" Build="LAB">
+  <BatchSequence>
+    <Batch>
+      <Statements>
+        <StmtSimple StatementText="SELECT OrderId FROM dbo.Orders WHERE CustomerId = @CustomerId">
+          <QueryPlan>
+            <RelOp NodeId="0" PhysicalOp="Index Seek" LogicalOp="Index Seek" EstimateRows="12" EstimatedTotalSubtreeCost="0.01">
+              <RunTimeInformation>
+                <RunTimeCountersPerThread Thread="0" ActualRows="15" />
+              </RunTimeInformation>
+            </RelOp>
+          </QueryPlan>
+        </StmtSimple>
+      </Statements>
+    </Batch>
+  </BatchSequence>
+</ShowPlanXML>

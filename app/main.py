@@ -5,6 +5,7 @@ import logging
 from app.agent import Agent
 from app.client import LlamaClient, ModelConnectionError, ModelResponseError
 from app.config import Settings
+from app.knowledge import KnowledgeIndex
 from app.logging_config import configure_logging
 from app.memory import MemoryStore
 from app.tools import build_registry
@@ -14,6 +15,8 @@ HELP = """Comandos disponibles:
   /info     Estado real del modelo y configuración
   /clear    Limpia el contexto y comienza una sesión nueva
   /history  Muestra el historial de la sesión actual
+  /dba      Muestra el estado de la especialización DBA
+  /knowledge Muestra estadísticas reales del corpus DBA
   /help     Muestra esta ayuda
   /exit     Finaliza el agente"""
 
@@ -53,6 +56,23 @@ def _show_history(agent: Agent) -> None:
     print()
 
 
+def _show_dba(settings: Settings) -> None:
+    print("\n=== DBA MODE ===")
+    print("SQL Server specialization enabled")
+    print("RAG                 : SQLite FTS5 local")
+    print("Herramientas        : knowledge, STATISTICS IO/TIME, sqlplan, deadlock XML")
+    print(f"Modelo              : {settings.model_display_name}")
+    print("================\n")
+
+
+def _show_knowledge(index: KnowledgeIndex) -> None:
+    stats = index.stats()
+    print("\n=== CONOCIMIENTO DBA ===")
+    print(f"Documentos indexados: {stats['documents']}")
+    print("Categorías          : " + ", ".join(stats["categories"]))
+    print("========================\n")
+
+
 def _print_event(kind: str, value: str) -> None:
     if kind == "tool_call":
         print(f"\n[tool] {value}")
@@ -67,7 +87,9 @@ def main() -> int:
     logger = configure_logging(settings.logs_dir)
     memory = MemoryStore(settings.memory_db)
     client = LlamaClient(settings, logger=logging.getLogger("ai_agent.client"))
-    registry = build_registry(settings)
+    knowledge_index = KnowledgeIndex(settings.knowledge_dir, settings.knowledge_db)
+    knowledge_index.rebuild()
+    registry = build_registry(settings, knowledge_index=knowledge_index)
     agent = Agent(client, registry, memory, settings, logger=logger)
 
     print("Agente IA local")
@@ -93,6 +115,12 @@ def main() -> int:
                     continue
                 if command == "/history":
                     _show_history(agent)
+                    continue
+                if command == "/dba":
+                    _show_dba(settings)
+                    continue
+                if command == "/knowledge":
+                    _show_knowledge(knowledge_index)
                     continue
                 if command == "/help":
                     print(f"\n{HELP}\n")
