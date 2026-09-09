@@ -68,6 +68,11 @@ _WORKSPACE_INTENT_TERMS = (
     "tests",
 )
 _TEXT_PATH = re.compile(r"(?<!\w)[\w./-]+\.txt(?!\w)", re.IGNORECASE)
+_POSITIVE_SCAN_INFERENCE = re.compile(
+    r"(?<!no )\b(?:indica(?:\s+que)?|significa(?:\s+que)?|confirma(?:\s+que)?|"
+    r"hubo|se realizó|ejecutó)\b.{0,100}\bescaneo\b",
+    re.IGNORECASE | re.DOTALL,
+)
 
 
 def _contains_statistics_io_payload(user_input: str) -> bool:
@@ -93,6 +98,40 @@ def _is_conceptual_dba_request(user_input: str) -> bool:
     return any(term in folded for term in _DBA_CONCEPT_TERMS) and not any(
         term in folded for term in _WORKSPACE_INTENT_TERMS
     )
+
+
+def _grounding_correction(user_input: str, answer: str) -> str | None:
+    request = user_input.casefold()
+    response = answer.casefold()
+    if (
+        "statistics io" in request
+        and "scan count" in request
+        and _POSITIVE_SCAN_INFERENCE.search(answer)
+    ):
+        return (
+            "Corrige la respuesta antes de entregarla. Has inferido o parafraseado "
+            "scan count como un escaneo. STATISTICS IO no prueba que hubiera Table "
+            "Scan, Index Scan, Index Seek, Key Lookup ni una operación genérica de "
+            "escaneo. Conserva las métricas observadas y di que el operador solo puede "
+            "identificarse con evidencia del plan de ejecución."
+        )
+    if "actual execution plan" in request and "spill" in request:
+        has_estimated_distinction = (
+            "showplan_xml" in response
+            and "estimad" in response
+            and ("no ejecuta" in response or "sin ejecutar" in response)
+        )
+        if not has_estimated_distinction:
+            return (
+                "Corrige la respuesta antes de entregarla. Distingue explícitamente "
+                "que SET SHOWPLAN_XML ON y Estimated Execution Plan en SSMS son "
+                "estimados y no ejecutan la consulta. Para un plan real menciona "
+                "Include Actual Execution Plan (Ctrl+M), SET STATISTICS XML ON o, "
+                "cuando sea apropiado, SET STATISTICS PROFILE ON. Mantén causas como "
+                "hipótesis y no deduzcas falta de índices ni memoria del servidor solo "
+                "por el spill."
+            )
+    return None
 
 
 class Agent:
@@ -161,6 +200,19 @@ class Agent:
             if not response.tool_calls:
                 if not response.content.strip():
                     raise ModelResponseError("El modelo devolvió una respuesta vacía")
+                correction = _grounding_correction(user_input, response.content)
+                if correction:
+                    self.logger.warning(
+                        "response_grounding_retry session_id=%s", self.session_id
+                    )
+                    on_event("response_retry", correction)
+                    self.messages.extend(
+                        [
+                            {"role": "assistant", "content": response.content},
+                            {"role": "user", "content": correction},
+                        ]
+                    )
+                    continue
                 self.messages.append(
                     {"role": "assistant", "content": response.content}
                 )

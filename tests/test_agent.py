@@ -94,7 +94,16 @@ def test_agent_hides_unrelated_tools_for_conceptual_dba_request(settings):
                 lambda: "ok",
             )
         )
-    client = FakeClient([ChatResponse(content="respuesta conceptual")])
+    client = FakeClient(
+        [
+            ChatResponse(
+                content=(
+                    "SHOWPLAN_XML es un plan estimado y no ejecuta la consulta; "
+                    "Ctrl+M permite obtener el plan real."
+                )
+            )
+        ]
+    )
     memory = MemoryStore(settings.memory_db)
     agent = Agent(client, registry, memory, settings)
 
@@ -179,4 +188,55 @@ def test_agent_keeps_workspace_tool_for_explicit_file_intent(settings):
 
     offered = {schema["function"]["name"] for schema in client.observed_tools[0]}
     assert offered == {"list_files"}
+    memory.close()
+
+
+def test_agent_retries_positive_scan_count_inference(settings):
+    settings.ensure_directories()
+    client = FakeClient(
+        [
+            ChatResponse(content="Scan count indica que se realizó un escaneo lógico."),
+            ChatResponse(
+                content=(
+                    "Scan count es una métrica observada; no identifica operadores. "
+                    "El plan de ejecución es la evidencia necesaria."
+                )
+            ),
+        ]
+    )
+    memory = MemoryStore(settings.memory_db)
+    retries = []
+
+    answer = Agent(client, ToolRegistry(), memory, settings).run(
+        "STATISTICS IO muestra Scan count 1.",
+        lambda kind, value: retries.append((kind, value)),
+    )
+
+    assert "no identifica operadores" in answer
+    assert len(client.observed_messages) == 2
+    assert retries[0][0] == "response_retry"
+    memory.close()
+
+
+def test_agent_retries_spill_answer_without_plan_capture_distinction(settings):
+    settings.ensure_directories()
+    client = FakeClient(
+        [
+            ChatResponse(content="El spill usó tempdb; revisa el memory grant."),
+            ChatResponse(
+                content=(
+                    "SHOWPLAN_XML es estimado y no ejecuta la consulta. Para el plan "
+                    "real usa Ctrl+M o SET STATISTICS XML ON."
+                )
+            ),
+        ]
+    )
+    memory = MemoryStore(settings.memory_db)
+
+    answer = Agent(client, ToolRegistry(), memory, settings).run(
+        "Un Actual Execution Plan muestra un spill.",
+    )
+
+    assert "SHOWPLAN_XML es estimado" in answer
+    assert len(client.observed_messages) == 2
     memory.close()

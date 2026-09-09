@@ -7,7 +7,7 @@ consulted: 2026-09-09
 
 ## Summary
 
-An execution plan is a tree of physical operators selected to implement a query. Read data flow and operator properties, not only icons. Important facts include predicates, estimated and actual rows, executions, ordered properties, memory grant, warnings, object and index names, and runtime counters when present. Only the plan can identify physical operators such as Table Scan, Index Scan, Index Seek and Key Lookup; `STATISTICS IO` scan count cannot.
+An execution plan is a tree of physical operators selected to implement a query. Read data flow and operator properties, not only icons. Important facts include predicates, estimated and actual rows, executions, ordered properties, memory grant, warnings, object and index names, and runtime counters when present. Only the plan can identify physical operators such as Table Scan, Index Scan, Index Seek and Key Lookup; `STATISTICS IO` scan count cannot. A spill warning proves that the operator wrote work data to tempdb during that execution, but does not by itself prove server-wide memory shortage, a missing index, stale statistics or root cause. Compare granted, requested and used memory, estimated versus actual rows and row width, spill details, IO, TIME, concurrency and Query Store history before proposing a change.
 
 ## Key concepts
 
@@ -31,7 +31,7 @@ An execution plan is a tree of physical operators selected to implement a query.
 1. Confirm whether the plan is actual or estimated.
 2. Follow the main data flow and compare row estimates with runtime rows.
 3. Inspect warnings, spills, predicates and repeated executions.
-4. Correlate with IO, TIME, waits and Query Store history.
+4. For a spill, inspect spill level/details, granted/requested/used memory, row-estimation and row-width differences, then correlate with IO, TIME, waits, concurrency and Query Store history.
 5. Test changes with representative parameters and concurrency.
 
 ## Example
