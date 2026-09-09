@@ -62,8 +62,9 @@ def test_statistics_io_parsing(tmp_path: Path):
         "requires_execution_plan_for_operator": True,
         "note": (
             "STATISTICS IO scan count no identifica Table Scan, Index Scan, "
-            "Index Seek ni Key Lookup; esos operadores requieren evidencia "
-            "del plan de ejecución."
+            "Index Seek ni Key Lookup y no debe parafrasearse como que hubo "
+            "un escaneo; esos operadores requieren evidencia del plan de "
+            "ejecución."
         ),
     }
 

@@ -76,10 +76,16 @@ def test_clear_starts_empty_history(settings):
     memory.close()
 
 
-def test_agent_hides_file_analyzers_without_user_path(settings):
+def test_agent_hides_unrelated_tools_for_conceptual_dba_request(settings):
     settings.ensure_directories()
     registry = ToolRegistry()
-    for name in ("search_knowledge", "analyze_execution_plan", "analyze_deadlock_xml"):
+    for name in (
+        "search_knowledge",
+        "list_files",
+        "analyze_statistics_io",
+        "analyze_execution_plan",
+        "analyze_deadlock_xml",
+    ):
         registry.register(
             ToolSpec(
                 name,
@@ -95,9 +101,7 @@ def test_agent_hides_file_analyzers_without_user_path(settings):
     agent.run("Explica un Hash Match con spill en un Actual Execution Plan")
 
     offered = {schema["function"]["name"] for schema in client.observed_tools[0]}
-    assert "search_knowledge" in offered
-    assert "analyze_execution_plan" not in offered
-    assert "analyze_deadlock_xml" not in offered
+    assert offered == {"search_knowledge"}
     memory.close()
 
 
@@ -122,4 +126,57 @@ def test_agent_exposes_matching_file_analyzer_for_explicit_path(settings):
     offered = {schema["function"]["name"] for schema in client.observed_tools[0]}
     assert "analyze_execution_plan" in offered
     assert "analyze_deadlock_xml" not in offered
+    memory.close()
+
+
+def test_agent_exposes_statistics_io_only_for_parseable_payload(settings):
+    settings.ensure_directories()
+    registry = ToolRegistry()
+    registry.register(
+        ToolSpec(
+            "analyze_statistics_io",
+            "test",
+            {"type": "object", "properties": {}, "additionalProperties": False},
+            lambda: "ok",
+        )
+    )
+    memory = MemoryStore(settings.memory_db)
+
+    conceptual_client = FakeClient([ChatResponse(content="respuesta conceptual")])
+    Agent(conceptual_client, registry, memory, settings).run(
+        "STATISTICS IO muestra Scan count 1 y logical reads 120000. ¿Qué significa?"
+    )
+    assert conceptual_client.observed_tools[0] == []
+
+    payload_client = FakeClient([ChatResponse(content="respuesta basada en datos")])
+    Agent(payload_client, registry, memory, settings).run(
+        "Table 'Orders'. Scan count 1, logical reads 120000."
+    )
+    offered = {
+        schema["function"]["name"] for schema in payload_client.observed_tools[0]
+    }
+    assert offered == {"analyze_statistics_io"}
+    memory.close()
+
+
+def test_agent_keeps_workspace_tool_for_explicit_file_intent(settings):
+    settings.ensure_directories()
+    registry = ToolRegistry()
+    registry.register(
+        ToolSpec(
+            "list_files",
+            "test",
+            {"type": "object", "properties": {}, "additionalProperties": False},
+            lambda: "ok",
+        )
+    )
+    client = FakeClient([ChatResponse(content="respuesta")])
+    memory = MemoryStore(settings.memory_db)
+
+    Agent(client, registry, memory, settings).run(
+        "¿Qué archivos hay disponibles en el workspace?"
+    )
+
+    offered = {schema["function"]["name"] for schema in client.observed_tools[0]}
+    assert offered == {"list_files"}
     memory.close()

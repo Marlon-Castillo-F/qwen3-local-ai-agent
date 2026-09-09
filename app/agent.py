@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import re
 import uuid
 from collections.abc import Callable
 from typing import Any
@@ -18,6 +19,80 @@ _FILE_ANALYZER_SUFFIXES = {
     "analyze_execution_plan": (".sqlplan",),
     "analyze_deadlock_xml": (".xml", ".xdl"),
 }
+_GENERAL_WORKSPACE_TOOLS = {
+    "list_files",
+    "read_file",
+    "write_file",
+    "git_status",
+    "git_diff",
+    "run_tests",
+}
+_CONTEXT_GATED_TOOLS = (
+    set(_FILE_ANALYZER_SUFFIXES)
+    | _GENERAL_WORKSPACE_TOOLS
+    | {"analyze_statistics_io", "analyze_statistics_time"}
+)
+_DBA_CONCEPT_TERMS = (
+    "sql server",
+    "execution plan",
+    "plan de ejecución",
+    "statistics io",
+    "statistics time",
+    "hash match",
+    "spill",
+    "tempdb",
+    "index seek",
+    "index scan",
+    "table scan",
+    "key lookup",
+    "query store",
+    "cardinalidad",
+    "deadlock",
+)
+_WORKSPACE_INTENT_TERMS = (
+    "workspace",
+    "archivo",
+    "fichero",
+    "directorio",
+    "carpeta",
+    "lista los",
+    "listar los",
+    "qué archivos",
+    "que archivos",
+    "lee ",
+    "leer ",
+    "escribe ",
+    "git ",
+    "pytest",
+    "pruebas",
+    "tests",
+)
+_TEXT_PATH = re.compile(r"(?<!\w)[\w./-]+\.txt(?!\w)", re.IGNORECASE)
+
+
+def _contains_statistics_io_payload(user_input: str) -> bool:
+    folded = user_input.casefold()
+    return bool(_TEXT_PATH.search(user_input)) or (
+        "table '" in folded
+        and any(
+            metric in folded
+            for metric in ("scan count", "logical reads", "physical reads", "read-ahead reads")
+        )
+    )
+
+
+def _contains_statistics_time_payload(user_input: str) -> bool:
+    folded = user_input.casefold()
+    return bool(_TEXT_PATH.search(user_input)) or (
+        "cpu time" in folded and "elapsed time" in folded
+    )
+
+
+def _is_conceptual_dba_request(user_input: str) -> bool:
+    folded = user_input.casefold()
+    return any(term in folded for term in _DBA_CONCEPT_TERMS) and not any(
+        term in folded for term in _WORKSPACE_INTENT_TERMS
+    )
 
 
 class Agent:
@@ -48,8 +123,9 @@ class Agent:
         return self.memory.history(self.session_id)
 
     def _tool_schemas_for(self, user_input: str) -> list[dict[str, Any]]:
-        """Expose file analyzers only when the user supplied a compatible path."""
+        """Expose tools only when the current request supplies their input or intent."""
         normalized_input = user_input.casefold()
+        conceptual_dba = _is_conceptual_dba_request(user_input)
         schemas: list[dict[str, Any]] = []
         for schema in self.registry.schemas():
             name = schema["function"]["name"]
@@ -57,6 +133,16 @@ class Agent:
             if suffixes and not any(
                 suffix in normalized_input for suffix in suffixes
             ):
+                continue
+            if name == "analyze_statistics_io" and not _contains_statistics_io_payload(
+                user_input
+            ):
+                continue
+            if name == "analyze_statistics_time" and not _contains_statistics_time_payload(
+                user_input
+            ):
+                continue
+            if conceptual_dba and name in _GENERAL_WORKSPACE_TOOLS:
                 continue
             schemas.append(schema)
         return schemas
@@ -97,12 +183,12 @@ class Agent:
                 )
                 try:
                     if (
-                        call.name in _FILE_ANALYZER_SUFFIXES
+                        call.name in _CONTEXT_GATED_TOOLS
                         and call.name not in offered_tool_names
                     ):
                         raise ToolError(
-                            "Herramienta no disponible sin una ruta de archivo "
-                            "compatible indicada por el usuario"
+                            "Herramienta no disponible para el contexto y la evidencia "
+                            "aportados por el usuario"
                         )
                     result = self.registry.execute(call.name, call.arguments)
                 except ToolError as exc:

@@ -13,7 +13,7 @@ Performance tuning begins with a reproducible symptom and measured workload cont
 
 - Actual versus estimated rows can expose estimation errors.
 - Logical reads describe buffer-pool page access, not just storage I/O.
-- `STATISTICS IO` scan count is an I/O statistic, not a physical-operator name. It cannot establish Table Scan, Index Scan, Index Seek or Key Lookup; only execution-plan evidence can identify those operators.
+- `STATISTICS IO` scan count is an I/O statistic, not a physical-operator name. Do not paraphrase it as “a scan happened.” It cannot establish Table Scan, Index Scan, Index Seek or Key Lookup; only execution-plan evidence can identify those operators.
 - CPU and elapsed time answer different questions, especially with parallelism or waits.
 - Operator warnings and memory spills are facts to investigate, not automatic root causes.
 
