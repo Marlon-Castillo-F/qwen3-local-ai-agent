@@ -134,6 +134,50 @@ def _grounding_correction(user_input: str, answer: str) -> str | None:
     return None
 
 
+def _metric_value(user_input: str, label: str) -> str:
+    match = re.search(rf"\b{re.escape(label)}\s+(\d+)\b", user_input, re.IGNORECASE)
+    return match.group(1) if match else "no indicado"
+
+
+def _grounding_fallback(user_input: str) -> str:
+    request = user_input.casefold()
+    if "statistics io" in request and "scan count" in request:
+        scan_count = _metric_value(user_input, "scan count")
+        logical_reads = _metric_value(user_input, "logical reads")
+        physical_reads = _metric_value(user_input, "physical reads")
+        read_ahead_reads = _metric_value(user_input, "read-ahead reads")
+        return (
+            "Hechos observados en STATISTICS IO: "
+            f"scan count={scan_count}, logical reads={logical_reads}, "
+            f"physical reads={physical_reads} y read-ahead reads={read_ahead_reads}. "
+            "Las logical reads cuentan accesos a páginas en el buffer pool. "
+            "Physical reads=0 indica que esa salida no reportó lecturas físicas "
+            "sincrónicas para la ejecución; no demuestra por sí solo eficiencia. "
+            "Read-ahead reads=0 solo informa que no se reportaron lecturas anticipadas. "
+            "Scan count es una métrica de STATISTICS IO y no identifica el operador "
+            "físico. Con estos datos no puede afirmarse Table Scan, Index Scan, Index "
+            "Seek, Key Lookup ni la ausencia de alguno de ellos. Para identificar el "
+            "operador se necesita evidencia del plan de ejecución; para valorar el "
+            "rendimiento también hacen falta duración, CPU, filas y contexto de carga."
+        )
+    return (
+        "Hecho observado: el Actual Execution Plan informa que el Hash Match derramó "
+        "trabajo intermedio a tempdb durante esa ejecución. Esto indica que el operador "
+        "no completó todo su trabajo dentro de la memoria de trabajo concedida, pero no "
+        "demuestra por sí solo falta de memoria del servidor, estadísticas obsoletas, "
+        "un índice faltante ni la causa raíz. Como hipótesis deben evaluarse diferencias "
+        "entre filas estimadas y reales, ancho de fila, sesgo de datos, volumen de "
+        "entrada, grant solicitado/concedido/usado, presión concurrente y límites del "
+        "grant. Antes de cambiar memoria, índices o consulta, revisa los detalles y nivel "
+        "del spill, MemoryGrantInfo, Estimated Rows frente a Actual Rows, ejecuciones del "
+        "operador, STATISTICS IO/TIME, concurrencia, esperas y el historial de Query "
+        "Store. Distinción de captura: SET SHOWPLAN_XML ON o Estimated Execution Plan "
+        "en SSMS producen un plan estimado y no ejecutan la consulta. Para un plan real, "
+        "usa Include Actual Execution Plan en SSMS (Ctrl+M), SET STATISTICS XML ON o, "
+        "cuando resulte apropiado, SET STATISTICS PROFILE ON."
+    )
+
+
 class Agent:
     def __init__(
         self,
@@ -194,6 +238,7 @@ class Agent:
         offered_tool_names = {
             schema["function"]["name"] for schema in tool_schemas
         }
+        grounding_retries = 0
 
         for _round in range(self.settings.max_tool_rounds + 1):
             response = self.client.chat(self.messages, tool_schemas)
@@ -202,6 +247,16 @@ class Agent:
                     raise ModelResponseError("El modelo devolvió una respuesta vacía")
                 correction = _grounding_correction(user_input, response.content)
                 if correction:
+                    if grounding_retries >= 1:
+                        content = _grounding_fallback(user_input)
+                        self.logger.warning(
+                            "response_grounding_fallback session_id=%s", self.session_id
+                        )
+                        on_event("response_fallback", content)
+                        self.messages.append({"role": "assistant", "content": content})
+                        self.memory.add(self.session_id, "assistant", content)
+                        return content
+                    grounding_retries += 1
                     self.logger.warning(
                         "response_grounding_retry session_id=%s", self.session_id
                     )

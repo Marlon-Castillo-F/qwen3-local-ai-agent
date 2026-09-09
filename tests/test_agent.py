@@ -240,3 +240,46 @@ def test_agent_retries_spill_answer_without_plan_capture_distinction(settings):
     assert "SHOWPLAN_XML es estimado" in answer
     assert len(client.observed_messages) == 2
     memory.close()
+
+
+def test_agent_falls_back_after_repeated_scan_count_inference(settings):
+    settings.ensure_directories()
+    client = FakeClient(
+        [
+            ChatResponse(content="Scan count indica que se realizó un escaneo."),
+            ChatResponse(content="Scan count confirma que hubo un escaneo."),
+        ]
+    )
+    memory = MemoryStore(settings.memory_db)
+
+    answer = Agent(client, ToolRegistry(), memory, settings).run(
+        "STATISTICS IO: Scan count 1, logical reads 120000, physical reads 0 y "
+        "read-ahead reads 0."
+    )
+
+    assert "scan count=1" in answer.casefold()
+    assert "no identifica el operador físico" in answer
+    assert "no puede afirmarse Table Scan" in answer
+    assert len(client.observed_messages) == 2
+    memory.close()
+
+
+def test_agent_falls_back_after_repeated_spill_capture_error(settings):
+    settings.ensure_directories()
+    client = FakeClient(
+        [
+            ChatResponse(content="El spill usó tempdb."),
+            ChatResponse(content="Revisa el plan real con SHOWPLAN_XML."),
+        ]
+    )
+    memory = MemoryStore(settings.memory_db)
+
+    answer = Agent(client, ToolRegistry(), memory, settings).run(
+        "Un Actual Execution Plan muestra un Hash Match con spill a tempdb."
+    )
+
+    assert "plan estimado y no ejecutan la consulta" in answer
+    assert "Include Actual Execution Plan" in answer
+    assert "SET STATISTICS XML ON" in answer
+    assert "SET STATISTICS PROFILE ON" in answer
+    memory.close()
