@@ -1,0 +1,294 @@
+{
+  "questions_equal": true,
+  "questions": 23,
+  "baseline": {
+    "questions": 23,
+    "completed_answers": 23,
+    "errors": 0,
+    "deterministic_passes": 9,
+    "forbidden_claim_hits": 1,
+    "concept_groups_met": 83,
+    "concept_groups_total": 111,
+    "tool_calls": {
+      "git_status": 1,
+      "list_files": 5,
+      "read_file": 3,
+      "run_tests": 2,
+      "write_file": 6
+    },
+    "human_review_required": true
+  },
+  "dba_edition": {
+    "questions": 23,
+    "completed_answers": 23,
+    "errors": 0,
+    "deterministic_passes": 14,
+    "forbidden_claim_hits": 0,
+    "concept_groups_met": 102,
+    "concept_groups_total": 111,
+    "tool_calls": {
+      "analyze_statistics_io": 1,
+      "analyze_statistics_time": 1,
+      "list_files": 1,
+      "search_knowledge": 5
+    },
+    "human_review_required": true
+  },
+  "delta": {
+    "deterministic_passes": 5,
+    "concept_groups_met": 19,
+    "forbidden_claim_hits": -1
+  },
+  "changes": [
+    {
+      "id": "backup-types-pitr",
+      "baseline_status": "pass",
+      "dba_edition_status": "pass",
+      "concept_groups_delta": 0,
+      "forbidden_claims_delta": 0,
+      "baseline_tools": [],
+      "dba_edition_tools": []
+    },
+    {
+      "id": "clustered-nonclustered",
+      "baseline_status": "needs_review",
+      "dba_edition_status": "pass",
+      "concept_groups_delta": 1,
+      "forbidden_claims_delta": -1,
+      "baseline_tools": [
+        "list_files",
+        "write_file"
+      ],
+      "dba_edition_tools": [
+        "search_knowledge"
+      ]
+    },
+    {
+      "id": "scan-vs-seek",
+      "baseline_status": "pass",
+      "dba_edition_status": "pass",
+      "concept_groups_delta": 0,
+      "forbidden_claims_delta": 0,
+      "baseline_tools": [],
+      "dba_edition_tools": []
+    },
+    {
+      "id": "join-selection",
+      "baseline_status": "pass",
+      "dba_edition_status": "pass",
+      "concept_groups_delta": 0,
+      "forbidden_claims_delta": 0,
+      "baseline_tools": [],
+      "dba_edition_tools": [
+        "search_knowledge"
+      ]
+    },
+    {
+      "id": "estimated-vs-actual-plan",
+      "baseline_status": "needs_review",
+      "dba_edition_status": "pass",
+      "concept_groups_delta": 2,
+      "forbidden_claims_delta": 0,
+      "baseline_tools": [
+        "write_file"
+      ],
+      "dba_edition_tools": [
+        "search_knowledge"
+      ]
+    },
+    {
+      "id": "cardinality-estimation",
+      "baseline_status": "needs_review",
+      "dba_edition_status": "needs_review",
+      "concept_groups_delta": 3,
+      "forbidden_claims_delta": 0,
+      "baseline_tools": [],
+      "dba_edition_tools": []
+    },
+    {
+      "id": "key-lookup",
+      "baseline_status": "needs_review",
+      "dba_edition_status": "needs_review",
+      "concept_groups_delta": 1,
+      "forbidden_claims_delta": 0,
+      "baseline_tools": [],
+      "dba_edition_tools": []
+    },
+    {
+      "id": "slow-query-workflow",
+      "baseline_status": "needs_review",
+      "dba_edition_status": "pass",
+      "concept_groups_delta": 3,
+      "forbidden_claims_delta": 0,
+      "baseline_tools": [
+        "write_file"
+      ],
+      "dba_edition_tools": [
+        "list_files"
+      ]
+    },
+    {
+      "id": "statistics-io",
+      "baseline_status": "needs_review",
+      "dba_edition_status": "pass",
+      "concept_groups_delta": 3,
+      "forbidden_claims_delta": 0,
+      "baseline_tools": [
+        "write_file"
+      ],
+      "dba_edition_tools": [
+        "analyze_statistics_io"
+      ]
+    },
+    {
+      "id": "statistics-time",
+      "baseline_status": "pass",
+      "dba_edition_status": "pass",
+      "concept_groups_delta": 0,
+      "forbidden_claims_delta": 0,
+      "baseline_tools": [],
+      "dba_edition_tools": [
+        "analyze_statistics_time"
+      ]
+    },
+    {
+      "id": "query-store",
+      "baseline_status": "needs_review",
+      "dba_edition_status": "needs_review",
+      "concept_groups_delta": 0,
+      "forbidden_claims_delta": 0,
+      "baseline_tools": [],
+      "dba_edition_tools": []
+    },
+    {
+      "id": "blocking",
+      "baseline_status": "needs_review",
+      "dba_edition_status": "pass",
+      "concept_groups_delta": 3,
+      "forbidden_claims_delta": 0,
+      "baseline_tools": [],
+      "dba_edition_tools": []
+    },
+    {
+      "id": "deadlock",
+      "baseline_status": "needs_review",
+      "dba_edition_status": "needs_review",
+      "concept_groups_delta": 1,
+      "forbidden_claims_delta": 0,
+      "baseline_tools": [],
+      "dba_edition_tools": []
+    },
+    {
+      "id": "tempdb",
+      "baseline_status": "needs_review",
+      "dba_edition_status": "needs_review",
+      "concept_groups_delta": 1,
+      "forbidden_claims_delta": 0,
+      "baseline_tools": [
+        "write_file"
+      ],
+      "dba_edition_tools": []
+    },
+    {
+      "id": "login-user-auth",
+      "baseline_status": "pass",
+      "dba_edition_status": "pass",
+      "concept_groups_delta": 0,
+      "forbidden_claims_delta": 0,
+      "baseline_tools": [
+        "list_files",
+        "list_files",
+        "write_file"
+      ],
+      "dba_edition_tools": []
+    },
+    {
+      "id": "statistics",
+      "baseline_status": "needs_review",
+      "dba_edition_status": "needs_review",
+      "concept_groups_delta": 0,
+      "forbidden_claims_delta": 0,
+      "baseline_tools": [],
+      "dba_edition_tools": []
+    },
+    {
+      "id": "fragmentation",
+      "baseline_status": "pass",
+      "dba_edition_status": "needs_review",
+      "concept_groups_delta": -1,
+      "forbidden_claims_delta": 0,
+      "baseline_tools": [],
+      "dba_edition_tools": []
+    },
+    {
+      "id": "index-tradeoffs",
+      "baseline_status": "pass",
+      "dba_edition_status": "pass",
+      "concept_groups_delta": 0,
+      "forbidden_claims_delta": 0,
+      "baseline_tools": [],
+      "dba_edition_tools": []
+    },
+    {
+      "id": "transaction-log-chain",
+      "baseline_status": "needs_review",
+      "dba_edition_status": "pass",
+      "concept_groups_delta": 1,
+      "forbidden_claims_delta": 0,
+      "baseline_tools": [],
+      "dba_edition_tools": []
+    },
+    {
+      "id": "isolation-blocking",
+      "baseline_status": "pass",
+      "dba_edition_status": "pass",
+      "concept_groups_delta": 0,
+      "forbidden_claims_delta": 0,
+      "baseline_tools": [
+        "list_files"
+      ],
+      "dba_edition_tools": [
+        "search_knowledge"
+      ]
+    },
+    {
+      "id": "spill-warning",
+      "baseline_status": "needs_review",
+      "dba_edition_status": "pass",
+      "concept_groups_delta": 1,
+      "forbidden_claims_delta": 0,
+      "baseline_tools": [
+        "run_tests"
+      ],
+      "dba_edition_tools": [
+        "search_knowledge"
+      ]
+    },
+    {
+      "id": "seek-with-lookups",
+      "baseline_status": "pass",
+      "dba_edition_status": "needs_review",
+      "concept_groups_delta": -1,
+      "forbidden_claims_delta": 0,
+      "baseline_tools": [
+        "git_status",
+        "list_files",
+        "read_file",
+        "read_file",
+        "read_file",
+        "run_tests"
+      ],
+      "dba_edition_tools": []
+    },
+    {
+      "id": "ha-azure-fundamentals",
+      "baseline_status": "needs_review",
+      "dba_edition_status": "needs_review",
+      "concept_groups_delta": 1,
+      "forbidden_claims_delta": 0,
+      "baseline_tools": [],
+      "dba_edition_tools": []
+    }
+  ],
+  "interpretation": "Las métricas son heurísticas determinísticas; la exactitud global requiere revisión humana."
+}
