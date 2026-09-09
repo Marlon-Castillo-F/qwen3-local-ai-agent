@@ -13,6 +13,8 @@ def settings(tmp_path: Path) -> Settings:
         logs_dir=tmp_path / "logs",
         data_dir=tmp_path / "data",
         memory_db=tmp_path / "data" / "memory.db",
+        knowledge_dir=tmp_path / "knowledge" / "sql-server",
+        knowledge_db=tmp_path / "data" / "knowledge.db",
         request_timeout=5,
         tool_timeout=2,
     )
