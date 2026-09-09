@@ -279,6 +279,7 @@ def test_agent_falls_back_after_repeated_spill_capture_error(settings):
     )
 
     assert "plan estimado y no ejecutan la consulta" in answer
+    assert "concesión de memoria (memory grant)" in answer
     assert "Include Actual Execution Plan" in answer
     assert "SET STATISTICS XML ON" in answer
     assert "SET STATISTICS PROFILE ON" in answer

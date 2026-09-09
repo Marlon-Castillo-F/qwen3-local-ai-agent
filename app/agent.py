@@ -163,7 +163,8 @@ def _grounding_fallback(user_input: str) -> str:
     return (
         "Hecho observado: el Actual Execution Plan informa que el Hash Match derramó "
         "trabajo intermedio a tempdb durante esa ejecución. Esto indica que el operador "
-        "no completó todo su trabajo dentro de la memoria de trabajo concedida, pero no "
+        "no completó todo su trabajo dentro de la concesión de memoria (memory grant) "
+        "disponible para esa ejecución, pero no "
         "demuestra por sí solo falta de memoria del servidor, estadísticas obsoletas, "
         "un índice faltante ni la causa raíz. Como hipótesis deben evaluarse diferencias "
         "entre filas estimadas y reales, ancho de fila, sesgo de datos, volumen de "
