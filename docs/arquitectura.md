@@ -16,7 +16,12 @@ flowchart TB
     TR -->|valida nombre y JSON| FT[Archivos]
     TR --> GT[Git lectura]
     TR --> TT[pytest allowlist]
+    TR --> KR[search_knowledge]
+    TR --> DT[Analizadores DBA offline]
     FT --> WS[(workspace/)]
+    DT --> WS
+    KR --> FTS[(SQLite FTS5)]
+    FTS --> KB[(knowledge/sql-server)]
     AG --> DB[(SQLite)]
     AG --> LOG[(agent.log)]
     TR -->|tool result| AG
@@ -29,10 +34,12 @@ La frontera principal está entre el texto generado por el modelo —no confiabl
 
 | Módulo | Responsabilidad |
 |---|---|
-| `app/main.py` | Bucle interactivo y comandos `/info`, `/help`, `/history`, `/clear`, `/exit` |
-| `app/agent.py` | Historial enviado al modelo, rondas de herramientas y eventos visibles |
+| `app/main.py` | Bucle interactivo y comandos `/info`, `/help`, `/history`, `/clear`, `/dba`, `/knowledge`, `/exit` |
+| `app/agent.py` | Historial, rondas de herramientas, eventos y gate de analizadores según artefactos explícitos |
 | `app/client.py` | `/v1/models`, `/v1/chat/completions`, timeouts y validación de respuestas |
-| `app/config.py` | Rutas, límites, identidad y system prompt |
+| `app/config.py` | Rutas, límites, identidad y ubicación del system prompt |
+| `app/prompts/dba_system.md` | Política y especialización DBA versionada |
+| `app/knowledge.py` | Indexación y retrieval léxico SQLite FTS5 |
 | `app/models.py` | Tipos internos para respuestas y tool calls |
 | `app/memory.py` | Persistencia SQLite por `session_id` y censura básica |
 | `app/logging_config.py` | Rotación y formato de logs |
@@ -40,6 +47,7 @@ La frontera principal está entre el texto generado por el modelo —no confiabl
 | `app/tools/files.py` | Operaciones seguras dentro del workspace |
 | `app/tools/git_tools.py` | `git status` y `git diff` sin mutaciones |
 | `app/tools/test_tools.py` | Ejecución de pytest mediante allowlist |
+| `app/tools/dba.py` | Parsing seguro de IO, TIME, sqlplan y deadlock XML |
 
 ## Secuencia de una herramienta
 
@@ -69,6 +77,8 @@ sequenceDiagram
 - El servicio usa el usuario sin shell `llama`; no comparte privilegios con el cliente.
 - El modelo y el runtime están fuera del repositorio y el GGUF está excluido por `.gitignore`.
 - SQLite y logs son datos de ejecución locales, también excluidos de Git.
+- El corpus DBA es texto versionado y auditable; el índice FTS5 generado vive en `data/` y no se versiona.
+- Los analizadores DBA no abren conexiones de base de datos: solo procesan texto o archivos autorizados del workspace.
 
 ## Estructura resumida
 
@@ -77,6 +87,8 @@ ai-agent/
 ├── app/
 │   └── tools/
 ├── deploy/
+├── evals/
+├── knowledge/sql-server/
 ├── docs/
 ├── tests/
 ├── workspace/

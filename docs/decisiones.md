@@ -18,7 +18,19 @@ El modelo propone; Python decide. Un registro explícito evita resolver nombres 
 
 ## Memoria SQLite
 
-SQLite aporta persistencia local, transacciones y consultas sencillas sin desplegar otro servicio. `/clear` crea un nuevo `session_id`: reduce el contexto de inferencia sin borrar el historial guardado. No hay memoria semántica ni RAG.
+SQLite aporta persistencia local, transacciones y consultas sencillas sin desplegar otro servicio. `/clear` crea un nuevo `session_id`: reduce el contexto de inferencia sin borrar el historial guardado.
+
+## Especialización sin entrenamiento
+
+DBA Edition conserva exactamente Qwen3-Coder-30B-A3B-Instruct Q4_K_M. No se aplicó fine-tuning, LoRA ni QLoRA. La especialización se logra con un system prompt auditable, retrieval local, herramientas determinísticas y una evaluación antes/después. Esto reduce costo y evita exagerar el alcance del proyecto.
+
+## SQLite FTS5 en vez de embeddings
+
+La terminología de SQL Server contiene tokens distintivos como `STATISTICS IO`, `Key Lookup`, `Query Store` y `tempdb`. FTS5 ofrece BM25, instalación cero adicional y un índice pequeño y reproducible. La contrapartida es que la búsqueda es léxica y puede perder equivalencias semánticas; el corpus incluye sinónimos en español e inglés para mitigarlo.
+
+## Herramientas DBA offline
+
+La primera versión no incorpora drivers ni credenciales de base de datos. Analizar archivos del workspace mantiene una frontera clara: Python extrae hechos y Qwen interpreta. Una futura conexión de solo lectura requeriría un diseño de autorización, auditoría y manejo de secretos separado.
 
 ## Usuario dedicado para inferencia
 

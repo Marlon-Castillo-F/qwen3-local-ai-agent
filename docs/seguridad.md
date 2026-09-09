@@ -27,6 +27,18 @@ El modelo se trata como una fuente de solicitudes no confiables. Ninguna afirmac
 - `subprocess.run` recibe una lista de argumentos y nunca usa `shell=True`.
 - Git y pytest tienen timeout; el modelo no puede añadir flags o comandos libres.
 
+### RAG y artefactos DBA
+
+- `search_knowledge` solo consulta documentos Markdown bajo `knowledge/sql-server/`.
+- La indexación rechaza symlinks, documentos fuera del corpus y archivos que excedan el límite.
+- SQLite FTS5 utiliza parámetros SQL; la consulta del usuario no se concatena como SQL ejecutable.
+- Los analizadores DBA reutilizan la resolución segura del workspace: bloquean rutas absolutas, traversal y escapes por symlink.
+- `Agent` solo ofrece el analizador de planes cuando el mensaje incluye `.sqlplan`, y el de deadlocks cuando incluye `.xml` o `.xdl`; una segunda comprobación impide ejecutar una tool de archivo que no fue ofrecida para esa solicitud.
+- `.sqlplan`, deadlock XML y archivos de texto tienen límite de tamaño y deben ser UTF-8 no binario.
+- El parser XML rechaza DTD y entidades; no ejecuta contenido ni resuelve recursos externos.
+- No existen drivers, connection strings ni herramientas para conectarse a SQL Server en DBA Edition 1.1.
+- Los resultados separan hechos extraídos de la interpretación posterior del modelo.
+
 ### Persistencia y logs
 
 - SQLite censura patrones evidentes de contraseñas, tokens bearer, API keys y bloques de clave privada.
@@ -56,3 +68,5 @@ La credencial SSH temporal utilizada durante la implementación se retiró despu
 ## Alcance
 
 Estos controles son adecuados para un agente local de laboratorio. Antes de exponerlo a otros usuarios o redes se necesitarían, como mínimo, autenticación, políticas de autorización, aislamiento adicional, revisión de datos y observabilidad centralizada.
+
+Los archivos DBA pueden contener SQL, nombres de objetos o texto de aplicaciones. Deben sanitizarse antes de entrar al workspace y nunca deben proceder de sistemas corporativos sin una autorización y un proceso de manejo de datos definidos.
