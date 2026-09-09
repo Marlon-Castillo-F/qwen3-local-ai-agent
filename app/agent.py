@@ -14,6 +14,12 @@ from app.tools.base import ToolError, ToolRegistry
 EventCallback = Callable[[str, str], None]
 
 
+_FILE_ANALYZER_SUFFIXES = {
+    "analyze_execution_plan": (".sqlplan",),
+    "analyze_deadlock_xml": (".xml", ".xdl"),
+}
+
+
 class Agent:
     def __init__(
         self,
@@ -41,13 +47,31 @@ class Agent:
     def history(self) -> list[MemoryEntry]:
         return self.memory.history(self.session_id)
 
+    def _tool_schemas_for(self, user_input: str) -> list[dict[str, Any]]:
+        """Expose file analyzers only when the user supplied a compatible path."""
+        normalized_input = user_input.casefold()
+        schemas: list[dict[str, Any]] = []
+        for schema in self.registry.schemas():
+            name = schema["function"]["name"]
+            suffixes = _FILE_ANALYZER_SUFFIXES.get(name)
+            if suffixes and not any(
+                suffix in normalized_input for suffix in suffixes
+            ):
+                continue
+            schemas.append(schema)
+        return schemas
+
     def run(self, user_input: str, on_event: EventCallback | None = None) -> str:
         on_event = on_event or (lambda _kind, _value: None)
         self.messages.append({"role": "user", "content": user_input})
         self.memory.add(self.session_id, "user", user_input)
+        tool_schemas = self._tool_schemas_for(user_input)
+        offered_tool_names = {
+            schema["function"]["name"] for schema in tool_schemas
+        }
 
         for _round in range(self.settings.max_tool_rounds + 1):
-            response = self.client.chat(self.messages, self.registry.schemas())
+            response = self.client.chat(self.messages, tool_schemas)
             if not response.tool_calls:
                 if not response.content.strip():
                     raise ModelResponseError("El modelo devolvió una respuesta vacía")
@@ -72,6 +96,14 @@ class Agent:
                     "tool_requested session_id=%s name=%s", self.session_id, call.name
                 )
                 try:
+                    if (
+                        call.name in _FILE_ANALYZER_SUFFIXES
+                        and call.name not in offered_tool_names
+                    ):
+                        raise ToolError(
+                            "Herramienta no disponible sin una ruta de archivo "
+                            "compatible indicada por el usuario"
+                        )
                     result = self.registry.execute(call.name, call.arguments)
                 except ToolError as exc:
                     result = f"ERROR: {exc}"
