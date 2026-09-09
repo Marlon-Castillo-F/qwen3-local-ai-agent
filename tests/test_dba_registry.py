@@ -37,6 +37,16 @@ def test_registry_contains_all_dba_tools(settings):
     } <= names
 
 
+def test_file_analyzer_schemas_forbid_invented_paths(settings):
+    registry = build_registry(settings, knowledge_index=_index(settings))
+    schemas = {schema["function"]["name"]: schema for schema in registry.schemas()}
+
+    for name in ("analyze_execution_plan", "analyze_deadlock_xml"):
+        description = schemas[name]["function"]["description"]
+        assert "usuario" in description
+        assert "nunca inventes rutas" in description
+
+
 def test_registry_search_executes_real_retrieval(settings):
     registry = build_registry(settings, knowledge_index=_index(settings))
     result = json.loads(

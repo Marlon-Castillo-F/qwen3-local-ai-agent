@@ -176,7 +176,12 @@ def build_registry(
     registry.register(
         ToolSpec(
             name="analyze_execution_plan",
-            description="Extrae hechos de un Actual o Estimated Execution Plan .sqlplan XML dentro del workspace.",
+            description=(
+                "Extrae hechos de un archivo .sqlplan XML que el usuario haya "
+                "proporcionado explícitamente dentro del workspace. Úsala solo "
+                "con una ruta relativa real indicada por el usuario; nunca "
+                "inventes rutas para preguntas conceptuales."
+            ),
             parameters={
                 "type": "object",
                 "properties": {"relative_path": {"type": "string"}},
@@ -193,7 +198,12 @@ def build_registry(
     registry.register(
         ToolSpec(
             name="analyze_deadlock_xml",
-            description="Extrae víctima, procesos, recursos y locks de un deadlock XML o XDL dentro del workspace.",
+            description=(
+                "Extrae víctima, procesos, recursos y locks de un archivo de "
+                "deadlock XML o XDL que el usuario haya proporcionado "
+                "explícitamente dentro del workspace. Úsala solo con una ruta "
+                "relativa real indicada por el usuario; nunca inventes rutas."
+            ),
             parameters={
                 "type": "object",
                 "properties": {"relative_path": {"type": "string"}},
