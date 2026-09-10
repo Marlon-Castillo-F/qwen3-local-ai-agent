@@ -27,6 +27,10 @@ RUN_LIVE_E2E=1 python -m pytest -q
 - `/info`, `/help`, `/history`, `/clear` y `/exit`.
 - Respuestas y errores del cliente HTTP.
 - Ciclo agentic con mensajes `role=tool`.
+- Indexación y retrieval SQLite FTS5, incluidos términos DBA en español.
+- Parsers de `STATISTICS IO`, `STATISTICS TIME`, `.sqlplan` y deadlock XML.
+- Seguridad y validación de argumentos de herramientas DBA.
+- Gate que oculta analizadores de archivos cuando el usuario no aporta una extensión compatible.
 
 ## Evolución de la validación
 
@@ -51,6 +55,19 @@ La validación completa previa al servicio obtuvo:
 ```
 
 También se ejecutaron ambas pruebas live contra una instancia manual no-root en un puerto alternativo y, después, en el puerto final. Ambas pasaron antes de crear la unidad systemd.
+
+La validación final de DBA Edition obtuvo:
+
+```text
+62 passed, 2 skipped in 0.68s
+```
+
+Las dos omisiones son exclusivamente los casos live protegidos por `RUN_LIVE_E2E`. Con llama-server disponible se ejecutó la suite completa:
+
+```text
+64 passed in 22.85s
+0 failed
+```
 
 ## Resultados end-to-end
 

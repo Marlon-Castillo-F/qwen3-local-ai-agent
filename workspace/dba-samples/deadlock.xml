@@ -1,0 +1,21 @@
+<deadlock-list>
+  <deadlock>
+    <victim-list><victimProcess id="processA" /></victim-list>
+    <process-list>
+      <process id="processA" spid="51" currentdb="7" isolationlevel="read committed" waitresource="KEY: 7:LAB" lockMode="S">
+        <executionStack><frame procname="Lab.dbo.UpdateA" line="10">UPDATE dbo.TableA SET Value = 1</frame></executionStack>
+        <inputbuf>EXEC dbo.UpdateA</inputbuf>
+      </process>
+      <process id="processB" spid="52" currentdb="7" isolationlevel="read committed" waitresource="KEY: 7:LAB2" lockMode="X">
+        <executionStack><frame procname="Lab.dbo.UpdateB" line="12">UPDATE dbo.TableB SET Value = 2</frame></executionStack>
+        <inputbuf>EXEC dbo.UpdateB</inputbuf>
+      </process>
+    </process-list>
+    <resource-list>
+      <keylock dbid="7" objectname="Lab.dbo.TableA">
+        <owner-list><owner id="processB" mode="X" /></owner-list>
+        <waiter-list><waiter id="processA" mode="S" /></waiter-list>
+      </keylock>
+    </resource-list>
+  </deadlock>
+</deadlock-list>

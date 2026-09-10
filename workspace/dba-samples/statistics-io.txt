@@ -1,0 +1,2 @@
+Table 'Orders'. Scan count 1, logical reads 1240, physical reads 0, read-ahead reads 1200.
+Table 'Customers'. Scan count 1, logical reads 8, physical reads 0, read-ahead reads 0.

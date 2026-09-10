@@ -1,0 +1,144 @@
+{
+  "version": 1,
+  "description": "Evaluación DBA orientada a razonamiento, evidencia y matices de SQL Server.",
+  "questions": [
+    {
+      "id": "backup-types-pitr",
+      "question": "Una base usa recovery model FULL. Explica la diferencia entre backups FULL, DIFFERENTIAL y LOG, y cómo diseñarías una restauración point-in-time a las 10:37 sin afirmar que ejecutaste nada.",
+      "required_concepts": [["full"], ["differential", "diferencial"], ["log", "transaction log"], ["point-in-time", "stopat", "punto en el tiempo"]],
+      "forbidden_claims": ["un differential contiene solo cambios desde el último differential", "un backup full trunca el log"]
+    },
+    {
+      "id": "clustered-nonclustered",
+      "question": "Compara un índice clustered y uno nonclustered en SQL Server. Incluye qué almacenan sus niveles hoja y evita decir que clustered significa simplemente 'orden físico garantizado'.",
+      "required_concepts": [["clustered"], ["nonclustered"], ["leaf", "hoja"], ["clustered key", "clave clustered", "row locator", "localizador"]],
+      "forbidden_claims": ["orden físico garantizado", "solo puede existir un índice nonclustered"]
+    },
+    {
+      "id": "scan-vs-seek",
+      "question": "Una consulta devuelve el 70% de una tabla y el plan usa Index Scan. ¿Es necesariamente malo? Compara Scan y Seek y explica cuándo el Scan puede ser la mejor opción.",
+      "required_concepts": [["scan"], ["seek"], ["70%", "gran porcentaje", "muchas filas"], ["logical reads", "lecturas lógicas", "costo", "coste"]],
+      "forbidden_claims": ["un table scan siempre es malo", "un index scan siempre es malo", "un index seek siempre es mejor"]
+    },
+    {
+      "id": "join-selection",
+      "question": "Explica cuándo Nested Loops, Hash Match y Merge Join pueden ser elecciones apropiadas. Relaciona cardinalidad, volumen, ordenación e índices; no clasifiques uno como universalmente mejor.",
+      "required_concepts": [["nested loops"], ["hash match", "hash join"], ["merge join"], ["cardinalidad", "cardinality"], ["orden", "sorted", "ordenación"]],
+      "forbidden_claims": ["nested loops siempre es lento", "hash match siempre es malo", "merge join siempre es mejor"]
+    },
+    {
+      "id": "estimated-vs-actual-plan",
+      "question": "Distingue Estimated Execution Plan de Actual Execution Plan. Explica por qué SET SHOWPLAN_XML no sustituye un plan real cuando investigas filas procesadas y métricas de ejecución.",
+      "required_concepts": [["estimated execution plan", "plan estimado"], ["actual execution plan", "plan real", "plan actual"], ["no ejecuta", "sin ejecutar"], ["actual rows", "filas reales"], ["showplan_xml"]],
+      "forbidden_claims": ["showplan_xml devuelve el actual execution plan", "el plan estimado contiene actual rows"]
+    },
+    {
+      "id": "cardinality-estimation",
+      "question": "El plan estima 100 filas pero procesa 2,000,000. ¿Qué significa esa diferencia, qué puede causarla y qué evidencia solicitarías antes de proponer cambios?",
+      "required_concepts": [["estadísticas", "statistics"], ["parameter sniffing", "olfateo de parámetros"], ["actual rows", "filas reales"], ["estimated rows", "filas estimadas"], ["plan", "query store"]],
+      "forbidden_claims": ["crear un índice siempre corrige la cardinalidad", "actualiza estadísticas y el problema quedará resuelto"]
+    },
+    {
+      "id": "key-lookup",
+      "question": "¿Qué es un Key Lookup y cuándo puede ser perfectamente aceptable? Describe cuándo se vuelve costoso y qué revisarías antes de recomendar un índice covering.",
+      "required_concepts": [["key lookup"], ["clustered", "heap", "row locator"], ["pocas filas", "few rows", "selectividad"], ["writes", "escrituras", "mantenimiento", "storage", "almacenamiento"]],
+      "forbidden_claims": ["un key lookup siempre debe eliminarse", "todo key lookup es malo"]
+    },
+    {
+      "id": "slow-query-workflow",
+      "question": "Diseña un flujo de diagnóstico para una consulta lenta usando Actual Execution Plan, SET STATISTICS IO ON y SET STATISTICS TIME ON. Separa hechos observados de hipótesis.",
+      "required_concepts": [["actual execution plan", "plan real", "plan actual"], ["statistics io"], ["statistics time"], ["logical reads", "lecturas lógicas"], ["cpu", "elapsed"]],
+      "forbidden_claims": ["el operador de mayor costo estimado es necesariamente la causa"]
+    },
+    {
+      "id": "statistics-io",
+      "question": "STATISTICS IO muestra Scan count 1, logical reads 120000, physical reads 0 y read-ahead reads 0. Explica qué puede concluirse y qué no puede concluirse solo con esos datos.",
+      "required_concepts": [["logical reads", "lecturas lógicas"], ["physical reads", "lecturas físicas"], ["cache", "buffer"], ["no identifica el operador", "no permite identificar el operador", "plan de ejecución"]],
+      "forbidden_claims": ["physical reads 0 significa que la consulta es eficiente", "scan count 1 demuestra un table scan", "indica que se realizó un escaneo completo", "el escaneo fue completo", "no un seek"]
+    },
+    {
+      "id": "statistics-time",
+      "question": "Una ejecución informa CPU time 8,000 ms y elapsed time 2,500 ms. ¿Cómo es posible y qué investigarías? Explica también el caso inverso: elapsed muy superior a CPU.",
+      "required_concepts": [["parallel", "paralelismo"], ["cpu"], ["elapsed"], ["wait", "espera", "blocking", "bloqueo", "io"]],
+      "forbidden_claims": ["cpu time nunca puede ser mayor que elapsed time"]
+    },
+    {
+      "id": "query-store",
+      "question": "¿Qué es Query Store y cómo lo usarías para investigar una regresión de rendimiento sin asumir que el plan más reciente es el culpable?",
+      "required_concepts": [["query store"], ["history", "historial"], ["runtime statistics", "estadísticas de ejecución"], ["plans", "planes"], ["regresión", "regression"]],
+      "forbidden_claims": ["query store ejecuta automáticamente el mejor plan"]
+    },
+    {
+      "id": "blocking",
+      "question": "Usuarios reportan que una aplicación está congelada. Describe cómo distinguir blocking de una consulta simplemente lenta y qué datos recopilarías antes de matar una sesión.",
+      "required_concepts": [["blocking", "bloqueo"], ["wait", "espera"], ["blocking_session_id", "sesión bloqueadora", "head blocker"], ["transaction", "transacción"], ["dm_exec_requests", "dm_os_waiting_tasks", "dm_tran_locks", "dmv"]],
+      "forbidden_claims": ["mata siempre la sesión bloqueadora", "kill es el primer paso"]
+    },
+    {
+      "id": "deadlock",
+      "question": "Explica qué es un deadlock, cómo difiere de blocking prolongado y cómo analizarías un deadlock XML para encontrar víctima, recursos y orden de acceso.",
+      "required_concepts": [["cycle", "ciclo"], ["victim", "víctima"], ["resource", "recurso"], ["deadlock xml", "extended events", "system_health"], ["orden", "order"]],
+      "forbidden_claims": ["un deadlock se resuelve aumentando el timeout", "blocking y deadlock son lo mismo"]
+    },
+    {
+      "id": "tempdb",
+      "question": "¿Qué funciones cumple tempdb y cómo investigarías contención o crecimiento anormal sin recomendar aumentar archivos de forma automática?",
+      "required_concepts": [["temporary", "temporal"], ["version store"], ["sort", "hash", "spill"], ["contención", "contention"], ["files", "archivos", "growth", "crecimiento"]],
+      "forbidden_claims": ["tempdb conserva datos después de reiniciar", "siempre crea un archivo por cpu"]
+    },
+    {
+      "id": "login-user-auth",
+      "question": "Distingue login, database user, authentication y authorization en SQL Server. Incluye el principio de mínimo privilegio.",
+      "required_concepts": [["login"], ["database user", "usuario de base"], ["authentication", "autenticación"], ["authorization", "autorización"], ["mínimo privilegio", "least privilege"]],
+      "forbidden_claims": ["todo usuario de base requiere un login", "autenticación y autorización son lo mismo"]
+    },
+    {
+      "id": "statistics",
+      "question": "¿Qué son las estadísticas del optimizador de SQL Server, cómo influyen en cardinalidad y por qué actualizarlas no garantiza por sí solo un buen plan?",
+      "required_concepts": [["histogram", "histograma"], ["density", "densidad"], ["cardinalidad", "cardinality"], ["optimizer", "optimizador"], ["plan"]],
+      "forbidden_claims": ["actualizar estadísticas siempre mejora la consulta", "las estadísticas contienen cada valor de la columna"]
+    },
+    {
+      "id": "fragmentation",
+      "question": "Un índice muestra 45% de fragmentación. ¿Es suficiente para ordenar un REBUILD? Explica cuándo importa realmente la fragmentación y qué otros factores revisarías.",
+      "required_concepts": [["page count", "número de páginas", "tamaño"], ["scan", "lectura secuencial"], ["rebuild", "reorganize"], ["log", "maintenance", "mantenimiento", "bloqueo"], ["evidencia", "workload", "carga"]],
+      "forbidden_claims": ["más de 30% siempre requiere rebuild", "45% obliga a rebuild"]
+    },
+    {
+      "id": "index-tradeoffs",
+      "question": "Te piden crear un índice para acelerar un SELECT. Enumera la evidencia y los trade-offs que evaluarías: reads, writes, storage, maintenance, selectivity, covering y key order.",
+      "required_concepts": [["reads", "lecturas"], ["writes", "escrituras"], ["storage", "almacenamiento"], ["maintenance", "mantenimiento"], ["selectivity", "selectividad"], ["covering", "cobertura"], ["key order", "orden de claves"]],
+      "forbidden_claims": ["crear un índice siempre mejora una consulta"]
+    },
+    {
+      "id": "transaction-log-chain",
+      "question": "En recovery model FULL, ¿qué condiciones permiten recuperación point-in-time y qué papel tienen la cadena de log, un tail-log backup y WITH NORECOVERY/RECOVERY?",
+      "required_concepts": [["log chain", "cadena de log"], ["tail-log", "tail log", "cola del log"], ["norecovery"], ["recovery"], ["full backup", "backup full"]],
+      "forbidden_claims": ["cada log backup es independiente", "norecovery deja la base disponible"]
+    },
+    {
+      "id": "isolation-blocking",
+      "question": "Relaciona transacciones, niveles de aislamiento, locks, row versioning y blocking. ¿Por qué NOLOCK no debe proponerse como solución universal?",
+      "required_concepts": [["isolation", "aislamiento"], ["lock", "bloqueo"], ["row version", "versionado"], ["nolock"], ["dirty", "sucia", "inconsistente"]],
+      "forbidden_claims": ["nolock elimina el blocking sin riesgos", "nolock siempre mejora rendimiento"]
+    },
+    {
+      "id": "spill-warning",
+      "question": "Un Actual Execution Plan muestra un Hash Match con spill a tempdb. Explica qué hechos aporta esa advertencia, causas posibles y qué medirías antes de cambiar memoria, índices o consulta.",
+      "required_concepts": [["spill"], ["tempdb"], ["memory grant", "concesión de memoria"], ["cardinalidad", "statistics", "estadísticas"], ["statistics xml", "actual execution plan", "plan real"], ["showplan_xml", "plan estimado", "no ejecuta"]],
+      "forbidden_claims": ["todo hash match debe reemplazarse", "un spill siempre se arregla creando un índice", "plan real con set showplan_xml", "plan real con `set showplan_xml", "actual execution plan con set showplan_xml"]
+    },
+    {
+      "id": "seek-with-lookups",
+      "question": "Un plan usa Index Seek para 500,000 filas seguido de Key Lookup repetido. Explica por qué el Seek puede no ser mejor que un Scan y cómo validarías alternativas.",
+      "required_concepts": [["seek"], ["key lookup"], ["500,000", "500000", "muchas filas"], ["logical reads", "lecturas lógicas", "io"], ["covering", "scan"]],
+      "forbidden_claims": ["index seek siempre es bueno", "key lookup siempre debe eliminarse"]
+    },
+    {
+      "id": "ha-azure-fundamentals",
+      "question": "Distingue brevemente alta disponibilidad de recuperación ante desastres y explica qué cambia conceptualmente al administrar Azure SQL Database frente a SQL Server en una VM, sin inventar SLA.",
+      "required_concepts": [["alta disponibilidad", "high availability", "ha"], ["disaster recovery", "recuperación ante desastres", "dr"], ["rpo"], ["rto"], ["managed", "administrado", "paas", "azure sql"]],
+      "forbidden_claims": ["alta disponibilidad elimina la necesidad de backups", "azure sql no requiere administración"]
+    }
+  ]
+}

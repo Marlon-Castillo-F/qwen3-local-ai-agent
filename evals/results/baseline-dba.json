@@ -1,0 +1,606 @@
+{
+  "schema_version": 1,
+  "label": "baseline-dba",
+  "generated_at": "2026-09-09T12:05:28.289381+00:00",
+  "model": "Qwen3-Coder-30B-A3B-Instruct Q4_K_M",
+  "engine": "llama.cpp",
+  "duration_seconds": 2098.453,
+  "questions_file": "evals/dba_questions.json",
+  "summary": {
+    "questions": 23,
+    "completed_answers": 23,
+    "errors": 0,
+    "deterministic_passes": 9,
+    "forbidden_claim_hits": 1,
+    "concept_groups_met": 83,
+    "concept_groups_total": 111,
+    "tool_calls": {
+      "git_status": 1,
+      "list_files": 5,
+      "read_file": 3,
+      "run_tests": 2,
+      "write_file": 6
+    },
+    "human_review_required": true
+  },
+  "results": [
+    {
+      "id": "backup-types-pitr",
+      "question": "Una base usa recovery model FULL. Explica la diferencia entre backups FULL, DIFFERENTIAL y LOG, y cómo diseñarías una restauración point-in-time a las 10:37 sin afirmar que ejecutaste nada.",
+      "answer": "Una base de datos con modelo de recuperación FULL permite la recuperación punto-a-tiempo (PITR) mediante el uso de copias de seguridad (backups) completas, diferenciales y de registro de transacciones (log). Cada tipo de backup tiene un propósito específico en el proceso de recuperación:\n\n1. **Backup FULL (Completo)**: Captura toda la base de datos en un momento dado. Es el punto de partida para cualquier restauración. Se usa como base para restaurar datos en caso de fallo, y es necesario para restaurar el estado de la base de datos en un momento específico.\n\n2. **Backup DIFFERENTIAL (Diferencial)**: Contiene solo los cambios realizados desde la última copia de seguridad FULL. Es más rápido y pequeño que un backup FULL, pero requiere el backup FULL para restaurarse. Se usa para reducir el tiempo de restauración al evitar restaurar todo el registro de transacciones.\n\n3. **Backup LOG (Registro de Transacciones)**: Captura todas las transacciones realizadas en la base de datos desde la última copia de seguridad de registro o desde el inicio del modelo de recuperación FULL. Es esencial para restaurar hasta un momento específico (PITR), ya que permite revertir las transacciones hasta el instante deseado.\n\n### Diseño de una restauración point-in-time a las 10:37\n\nPara restaurar la base de datos a las 10:37, se deben seguir estos pasos:\n\n1. **Restaurar el backup FULL más reciente antes de las 10:37**: Este backup proporciona el estado inicial de la base de datos.\n2. **Restaurar los backups DIFFERENTIAL (si existen) más recientes antes de las 10:37**: Estos backups contienen los cambios desde el último FULL.\n3. **Restaurar los backups LOG desde el último backup DIFFERENTIAL hasta las 10:37**: Esto permite aplicar las transacciones realizadas hasta ese momento, asegurando la restauración precisa del estado de la base de datos.\n\nEste proceso garantiza que la base de datos se restaure al estado exacto que existía a las 10:37, incluyendo todas las transacciones realizadas hasta ese instante.",
+      "duration_seconds": 52.422,
+      "tool_calls": [],
+      "tool_results": [],
+      "error": null,
+      "evaluation": {
+        "concept_groups_met": 4,
+        "concept_groups_total": 4,
+        "missing_concept_groups": [],
+        "forbidden_claim_hits": [],
+        "deterministic_status": "pass",
+        "human_review_required": true
+      }
+    },
+    {
+      "id": "clustered-nonclustered",
+      "question": "Compara un índice clustered y uno nonclustered en SQL Server. Incluye qué almacenan sus niveles hoja y evita decir que clustered significa simplemente 'orden físico garantizado'.",
+      "answer": "He creado un documento que compara los índices clustered y nonclustered en SQL Server, enfocándome en qué almacenan sus niveles hoja y evitando definir \"clustered\" como simplemente \"orden físico garantizado\".\n\nEl documento incluye:\n\n1. Una definición clara de ambos tipos de índices\n2. Una explicación detallada de qué almacenan los niveles hoja de cada uno\n3. Una tabla resumen que compara las características principales\n\n¿Te gustaría que ampliemos este contenido con ejemplos prácticos o información adicional sobre el rendimiento de estos índices?",
+      "duration_seconds": 69.365,
+      "tool_calls": [
+        "list_files",
+        "write_file"
+      ],
+      "tool_results": [
+        "[DIR] proyecto-demo\n[FILE] prueba.txt",
+        "Archivo escrito: proyecto-demo/indice-clustered-vs-nonclustered.md (1827 bytes)"
+      ],
+      "error": null,
+      "evaluation": {
+        "concept_groups_met": 3,
+        "concept_groups_total": 4,
+        "missing_concept_groups": [
+          [
+            "clustered key",
+            "clave clustered",
+            "row locator",
+            "localizador"
+          ]
+        ],
+        "forbidden_claim_hits": [
+          "orden físico garantizado"
+        ],
+        "deterministic_status": "needs_review",
+        "human_review_required": true
+      }
+    },
+    {
+      "id": "scan-vs-seek",
+      "question": "Una consulta devuelve el 70% de una tabla y el plan usa Index Scan. ¿Es necesariamente malo? Compara Scan y Seek y explica cuándo el Scan puede ser la mejor opción.",
+      "answer": "No, un Index Scan no es necesariamente malo, especialmente si la consulta devuelve el 70% de una tabla. Vamos a comparar los conceptos de \"Scan\" y \"Seek\" y explicar cuándo un Index Scan puede ser la mejor opción.\n\n### Conceptos clave:\n\n1. **Index Scan**: Es una operación en la que el motor de base de datos recorre un índice (ya sea completo o parcial) para encontrar las filas que coinciden con la consulta. Puede ser más eficiente si la cantidad de datos devueltos es pequeña, pero si se devuelven muchos registros, puede ser ineficiente.\n\n2. **Index Seek**: Es una operación más eficiente en la que el motor de base de datos utiliza el índice para localizar directamente las filas que coinciden con la consulta, evitando recorrer todo el índice.\n\n### ¿Cuándo es mejor un Index Scan?\n\nUn Index Scan puede ser la mejor opción en los siguientes casos:\n\n1. **Consulta que devuelve una gran proporción de registros**: Si la consulta devuelve el 70% de una tabla, es probable que un Index Scan sea más eficiente que un Index Seek, ya que el costo de recorrer el índice completo puede ser menor que el costo de acceder a las filas individuales a través de múltiples seeks.\n\n2. **Índice no selectivo**: Si el índice no es muy selectivo (es decir, no filtra muchos registros), un Index Scan puede ser más eficiente que un Index Seek.\n\n3. **Ordenamiento o agrupamiento**: Si la consulta requiere ordenar o agrupar los resultados, un Index Scan puede ser más eficiente si el índice ya está ordenado.\n\n### Conclusión:\n\nUn Index Scan no es necesariamente malo. Su eficiencia depende del tamaño de los datos devueltos, la selectividad del índice y la naturaleza de la consulta. Si la consulta devuelve una gran proporción de registros, un Index Scan puede ser la mejor opción.",
+      "duration_seconds": 46.876,
+      "tool_calls": [],
+      "tool_results": [],
+      "error": null,
+      "evaluation": {
+        "concept_groups_met": 4,
+        "concept_groups_total": 4,
+        "missing_concept_groups": [],
+        "forbidden_claim_hits": [],
+        "deterministic_status": "pass",
+        "human_review_required": true
+      }
+    },
+    {
+      "id": "join-selection",
+      "question": "Explica cuándo Nested Loops, Hash Match y Merge Join pueden ser elecciones apropiadas. Relaciona cardinalidad, volumen, ordenación e índices; no clasifiques uno como universalmente mejor.",
+      "answer": "Nested Loops, Hash Match y Merge Join son tres algoritmos de unión (join) utilizados en motores de bases de datos para combinar filas de dos o más tablas. Cada uno tiene ventajas y desventajas dependiendo de las características de los datos, como la cardinalidad, el volumen, el orden y el uso de índices. A continuación se explica cuándo cada uno puede ser una elección apropiada.\n\n### 1. **Nested Loops Join**\nEste algoritmo funciona como un bucle anidado: para cada fila de la tabla externa, recorre toda la tabla interna buscando coincidencias.\n\n#### **Cuándo es apropiado:**\n- Cuando una de las tablas es **pequeña** (puede ser cargada en memoria).\n- Cuando la tabla interna está **ordenada** o tiene un **índice** que permite una búsqueda eficiente.\n- Cuando la **cardinalidad** de la tabla externa es baja (pocas filas).\n- Cuando se usa un **índice** en la columna de join de la tabla interna.\n\n#### **Ventajas:**\n- Eficiente si una tabla es muy pequeña.\n- No requiere ordenación previa si se usa un índice.\n\n#### **Desventajas:**\n- Puede ser ineficiente si ambas tablas son grandes, ya que tiene complejidad O(n×m).\n\n---\n\n### 2. **Hash Join**\nEste algoritmo construye una tabla hash con los datos de una tabla (la más pequeña) y luego recorre la otra tabla para hacer coincidir las claves.\n\n#### **Cuándo es apropiado:**\n- Cuando **ambas tablas son grandes**, pero no están ordenadas.\n- Cuando **no hay índices** en las columnas de join.\n- Cuando se puede **cargar una tabla en memoria** para construir el hash.\n- Cuando la **cardinalidad** es alta y no hay ordenación.\n\n#### **Ventajas:**\n- Muy eficiente para tablas grandes sin ordenación.\n- No requiere índices ni ordenación previa.\n\n#### **Desventajas:**\n- Requiere memoria suficiente para almacenar el hash table.\n- No es eficiente si una tabla es mucho más pequeña que la otra.\n\n---\n\n### 3. **Merge Join**\nEste algoritmo une dos tablas que están **previamente ordenadas** (o se ordenan en el proceso) usando dos punteros para recorrer ambas tablas.\n\n#### **Cuándo es apropiado:**\n- Cuando **ambas tablas están ordenadas** por la columna de join.\n- Cuando **ambas tablas son grandes** y el ordenamiento es costoso, pero se puede reutilizar.\n- Cuando se tiene un **índice** en la columna de join y se puede usar para ordenar.\n- Cuando se requiere **unión de grandes volúmenes** de datos.\n\n#### **Ventajas:**\n- Muy eficiente si las tablas ya están ordenadas.\n- Tiene complejidad O(n + m) si están ordenadas.\n\n#### **Desventajas:**\n- Requiere que las tablas estén ordenadas o que se pueda ordenar, lo cual puede ser costoso.\n- No es eficiente si una tabla es mucho más pequeña que la otra.\n\n---\n\n### Relación con Cardinalidad, Volumen, Ordenación e Índices\n\n| Factor | Nested Loops | Hash Join | Merge Join |\n|--------|--------------|-----------|------------|\n| **Cardinalidad** | Baja o moderada | Alta | Alta |\n| **Volumen de datos** | Pequeño o moderado | Grande | Grande |\n| **Ordenación** | Útil si está ordenada o con índice | No necesaria | Requerida |\n| **Índices** | Útil para acelerar la búsqueda | No necesaria | Útil para ordenar |\n\n---\n\n### Conclusión\n\n- **Nested Loops** es ideal para tablas pequeñas o cuando se usa un índice para acelerar la búsqueda.\n- **Hash Join** es eficiente para grandes tablas sin ordenación ni índices.\n- **Merge Join** es ideal para grandes tablas ya ordenadas o cuando se puede ordenar eficientemente.\n\nNo existe un algoritmo universalmente mejor; la elección depende del contexto de los datos y del entorno de ejecución.",
+      "duration_seconds": 104.029,
+      "tool_calls": [],
+      "tool_results": [],
+      "error": null,
+      "evaluation": {
+        "concept_groups_met": 5,
+        "concept_groups_total": 5,
+        "missing_concept_groups": [],
+        "forbidden_claim_hits": [],
+        "deterministic_status": "pass",
+        "human_review_required": true
+      }
+    },
+    {
+      "id": "estimated-vs-actual-plan",
+      "question": "Distingue Estimated Execution Plan de Actual Execution Plan. Explica por qué SET SHOWPLAN_XML no sustituye un plan real cuando investigas filas procesadas y métricas de ejecución.",
+      "answer": "He creado un archivo markdown que explica la diferencia entre el **Estimated Execution Plan** y el **Actual Execution Plan**, y por qué `SET SHOWPLAN_XML` no puede sustituir al plan real cuando se investigan métricas como filas procesadas y tiempos de ejecución.\n\nEl archivo contiene:\n\n1. Una explicación clara de qué es cada tipo de plan.\n2. Las razones por las cuales `SET SHOWPLAN_XML` no proporciona métricas reales de ejecución.\n3. Las herramientas recomendadas para obtener planes de ejecución reales.\n\n¿Te gustaría que lo convierta en un formato diferente o que agregue más detalles técnicos?",
+      "duration_seconds": 87.929,
+      "tool_calls": [
+        "write_file"
+      ],
+      "tool_results": [
+        "Archivo escrito: plan_explanation.md (2540 bytes)"
+      ],
+      "error": null,
+      "evaluation": {
+        "concept_groups_met": 3,
+        "concept_groups_total": 5,
+        "missing_concept_groups": [
+          [
+            "no ejecuta",
+            "sin ejecutar"
+          ],
+          [
+            "actual rows",
+            "filas reales"
+          ]
+        ],
+        "forbidden_claim_hits": [],
+        "deterministic_status": "needs_review",
+        "human_review_required": true
+      }
+    },
+    {
+      "id": "cardinality-estimation",
+      "question": "El plan estima 100 filas pero procesa 2,000,000. ¿Qué significa esa diferencia, qué puede causarla y qué evidencia solicitarías antes de proponer cambios?",
+      "answer": "La diferencia entre el plan estimado de 100 filas y el procesamiento de 2,000,000 filas puede indicar un problema significativo en el sistema o proceso en cuestión. Esta discrepancia puede deberse a múltiples causas, como errores de configuración, fallos en la lógica de procesamiento, malentendidos en la estimación o incluso errores de medición.\n\n### Posibles causas:\n1. **Error de configuración**: Un parámetro de configuración podría haberse establecido incorrectamente, causando que el sistema procese más datos de los esperados.\n2. **Fallo en la lógica de procesamiento**: El código podría estar procesando datos en un bucle o condición que no se detiene correctamente.\n3. **Malentendido en la estimación**: La estimación inicial de 100 filas podría haber sido incorrecta debido a una falta de comprensión del volumen real de datos.\n4. **Fallo en la medición o monitoreo**: El sistema de monitoreo podría estar reportando datos incorrectos o incompletos.\n\n### Evidencia necesaria antes de proponer cambios:\nAntes de proponer cualquier cambio, se necesitaría recopilar evidencia que ayude a identificar la causa raíz del problema. Algunas evidencias clave incluyen:\n\n1. **Logs del sistema**: Revisar los registros del sistema para identificar si hay errores o advertencias durante el procesamiento.\n2. **Configuración del sistema**: Verificar los archivos de configuración para asegurarse de que los parámetros están correctamente establecidos.\n3. **Código fuente**: Revisar el código que procesa los datos para identificar posibles bucles infinitos o condiciones incorrectas.\n4. **Datos de entrada**: Analizar los datos de entrada para entender si hay una cantidad inesperada de filas.\n5. **Resultados de pruebas**: Ejecutar pruebas unitarias o de integración para verificar el comportamiento del sistema bajo condiciones controladas.\n\n### Pasos iniciales:\n1. **Revisar los logs del sistema** para identificar posibles errores o advertencias.\n2. **Verificar la configuración del sistema** para asegurarse de que no haya parámetros incorrectos.\n3. **Revisar el código fuente** para detectar posibles errores lógicos.\n4. **Ejecutar pruebas** para validar el comportamiento del sistema.\n\nSi tienes acceso a más detalles específicos del sistema o del proceso, sería útil proporcionarlos para una evaluación más precisa.",
+      "duration_seconds": 60.522,
+      "tool_calls": [],
+      "tool_results": [],
+      "error": null,
+      "evaluation": {
+        "concept_groups_met": 1,
+        "concept_groups_total": 5,
+        "missing_concept_groups": [
+          [
+            "estadísticas",
+            "statistics"
+          ],
+          [
+            "parameter sniffing",
+            "olfateo de parámetros"
+          ],
+          [
+            "actual rows",
+            "filas reales"
+          ],
+          [
+            "estimated rows",
+            "filas estimadas"
+          ]
+        ],
+        "forbidden_claim_hits": [],
+        "deterministic_status": "needs_review",
+        "human_review_required": true
+      }
+    },
+    {
+      "id": "key-lookup",
+      "question": "¿Qué es un Key Lookup y cuándo puede ser perfectamente aceptable? Describe cuándo se vuelve costoso y qué revisarías antes de recomendar un índice covering.",
+      "answer": "Un **Key Lookup** es una operación en bases de datos relacionales (como SQL Server, MySQL, etc.) que ocurre cuando el motor de la base de datos necesita recuperar una fila completa de datos después de haber encontrado una fila en un índice. Esto sucede comúnmente cuando se realiza una consulta que incluye columnas que no están incluidas en el índice utilizado para la búsqueda.\n\n### ¿Cuándo puede ser perfectamente aceptable?\n\nUn Key Lookup puede ser perfectamente aceptable en los siguientes casos:\n\n1. **Bajo volumen de datos**: Si solo hay un pequeño número de filas que necesitan ser recuperadas, el costo del Key Lookup es insignificante.\n2. **Índices bien diseñados**: Si el índice utilizado para la búsqueda es eficiente y el número de Key Lookups es bajo, el impacto en el rendimiento es mínimo.\n3. **Consulta selectiva**: Si la consulta filtra bien los datos, reduciendo el número de filas que necesitan ser recuperadas, el Key Lookup no es un problema significativo.\n\n### ¿Cuándo se vuelve costoso?\n\nUn Key Lookup se vuelve costoso cuando:\n\n1. **Alto volumen de datos**: Si se realizan muchas Key Lookups, el costo acumulado puede ser significativo.\n2. **Falta de cobertura del índice**: Si el índice no incluye todas las columnas necesarias para la consulta, el motor debe realizar una búsqueda adicional en la tabla principal para obtener los datos faltantes.\n3. **Consulta no selectiva**: Si la consulta no filtra bien los datos, puede resultar en muchas Key Lookups, lo cual afecta negativamente el rendimiento.\n\n### ¿Qué revisarías antes de recomendar un índice covering?\n\nAntes de recomendar un índice covering (un índice que incluye todas las columnas necesarias para una consulta, evitando así el Key Lookup), revisaría lo siguiente:\n\n1. **Consulta SQL**: Analizar la consulta para identificar las columnas que se están seleccionando y las condiciones de filtro.\n2. **Índices existentes**: Verificar qué índices ya existen y si alguno podría ser modificado o reestructurado para cubrir las columnas necesarias.\n3. **Frecuencia de la consulta**: Evaluar cuán frecuentemente se ejecuta la consulta, ya que un índice covering puede ser beneficioso si la consulta se ejecuta con frecuencia.\n4. **Costo de mantenimiento**: Considerar el costo de mantener el índice covering, ya que puede afectar el rendimiento de las operaciones de inserción, actualización y eliminación.\n5. **Tamaño del índice**: Evaluar el tamaño adicional que el índice covering añadirá a la base de datos, especialmente si hay muchas columnas.\n\nEn resumen, un Key Lookup puede ser aceptable en ciertos contextos, pero se vuelve costoso si se realiza con frecuencia o en grandes volúmenes. Antes de recomendar un índice covering, es importante analizar la consulta, los índices existentes y el impacto en el rendimiento general del sistema.",
+      "duration_seconds": 70.711,
+      "tool_calls": [],
+      "tool_results": [],
+      "error": null,
+      "evaluation": {
+        "concept_groups_met": 2,
+        "concept_groups_total": 4,
+        "missing_concept_groups": [
+          [
+            "clustered",
+            "heap",
+            "row locator"
+          ],
+          [
+            "pocas filas",
+            "few rows",
+            "selectividad"
+          ]
+        ],
+        "forbidden_claim_hits": [],
+        "deterministic_status": "needs_review",
+        "human_review_required": true
+      }
+    },
+    {
+      "id": "slow-query-workflow",
+      "question": "Diseña un flujo de diagnóstico para una consulta lenta usando Actual Execution Plan, SET STATISTICS IO ON y SET STATISTICS TIME ON. Separa hechos observados de hipótesis.",
+      "answer": "He creado un flujo de diagnóstico para consultas lentas que incluye los siguientes elementos:\n\n1. **Hechos observados**: \n   - Rendimiento inaceptable de una consulta específica\n   - Posibilidad de ejecutar la consulta en el entorno\n   - Permisos necesarios para ejecutar comandos de diagnóstico\n\n2. **Hipótesis**:\n   - Falta de índices adecuados\n   - Plan de ejecución ineficiente\n   - Bloqueos o contención de recursos\n   - Grandes volúmenes de datos\n   - Uso de funciones en columnas en cláusulas WHERE\n\n3. **Flujo de diagnóstico paso a paso**:\n   - Habilitar estadísticas de E/S y tiempo con `SET STATISTICS IO ON` y `SET STATISTICS TIME ON`\n   - Ejecutar la consulta\n   - Analizar el plan de ejecución actual\n   - Comparar con el plan esperado\n   - Revisar operaciones costosas como scans completos o key lookups\n   - Optimizar mediante creación de índices, reescritura de consultas y revisión de estructura de datos\n\nEl archivo `diagnostic_flow.md` contiene esta información en formato markdown para su fácil consulta. ¿Deseas que lo modifiquemos o ampliemos en algún aspecto específico?",
+      "duration_seconds": 102.294,
+      "tool_calls": [
+        "write_file"
+      ],
+      "tool_results": [
+        "Archivo escrito: diagnostic_flow.md (2144 bytes)"
+      ],
+      "error": null,
+      "evaluation": {
+        "concept_groups_met": 2,
+        "concept_groups_total": 5,
+        "missing_concept_groups": [
+          [
+            "actual execution plan",
+            "plan real",
+            "plan actual"
+          ],
+          [
+            "logical reads",
+            "lecturas lógicas"
+          ],
+          [
+            "cpu",
+            "elapsed"
+          ]
+        ],
+        "forbidden_claim_hits": [],
+        "deterministic_status": "needs_review",
+        "human_review_required": true
+      }
+    },
+    {
+      "id": "statistics-io",
+      "question": "STATISTICS IO muestra Scan count 1, logical reads 120000, physical reads 0 y read-ahead reads 0. Explica qué puede concluirse y qué no puede concluirse solo con esos datos.",
+      "answer": "El archivo `statistics_io_analysis.md` ha sido creado con un análisis detallado de los datos proporcionados por `STATISTICS IO`. Contiene las conclusiones que se pueden extraer y las que no se pueden extraer solo con esa información.\n\n¿Deseas que te lo lea o que realice algún otro análisis?",
+      "duration_seconds": 58.225,
+      "tool_calls": [
+        "write_file"
+      ],
+      "tool_results": [
+        "Archivo escrito: statistics_io_analysis.md (1663 bytes)"
+      ],
+      "error": null,
+      "evaluation": {
+        "concept_groups_met": 1,
+        "concept_groups_total": 4,
+        "missing_concept_groups": [
+          [
+            "logical reads",
+            "lecturas lógicas"
+          ],
+          [
+            "physical reads",
+            "lecturas físicas"
+          ],
+          [
+            "cache",
+            "buffer"
+          ]
+        ],
+        "forbidden_claim_hits": [],
+        "deterministic_status": "needs_review",
+        "human_review_required": true
+      }
+    },
+    {
+      "id": "statistics-time",
+      "question": "Una ejecución informa CPU time 8,000 ms y elapsed time 2,500 ms. ¿Cómo es posible y qué investigarías? Explica también el caso inverso: elapsed muy superior a CPU.",
+      "answer": "La diferencia entre el tiempo de CPU y el tiempo transcurrido (elapsed time) puede revelar información valiosa sobre el comportamiento de un programa, especialmente en términos de paralelismo, espera de I/O o uso de recursos del sistema.\n\n### Caso 1: CPU time > elapsed time\n\nEn este caso, el tiempo de CPU es mayor que el tiempo transcurrido. Esto puede ocurrir si:\n\n1. **El programa utiliza múltiples hilos o procesos**: Si el programa se ejecuta en paralelo (por ejemplo, usando múltiples núcleos o hilos), el tiempo total de CPU puede superar el tiempo transcurrido, ya que varios hilos pueden estar ejecutándose simultáneamente.\n\n2. **El programa está haciendo uso intensivo de la CPU**: Si el programa está realizando cálculos intensivos, puede consumir más tiempo de CPU que el tiempo real transcurrido, especialmente si el sistema está optimizando el uso del CPU.\n\n3. **El tiempo de CPU es acumulativo**: El tiempo de CPU es la suma de los tiempos de CPU de todos los hilos o procesos del programa. Si hay múltiples hilos, el tiempo total de CPU puede ser mayor que el tiempo transcurrido.\n\n### Caso 2: Elapsed time >> CPU time\n\nEn este caso, el tiempo transcurrido es mucho mayor que el tiempo de CPU. Esto puede ocurrir si:\n\n1. **El programa está esperando I/O (entrada/salida)**: Si el programa está esperando datos de una red, disco o cualquier otro recurso, el tiempo transcurrido puede ser mucho mayor que el tiempo de CPU, ya que el programa no está utilizando la CPU durante ese tiempo.\n\n2. **El programa está en espera activa (busy waiting)**: Aunque menos común, si el programa está esperando activamente (por ejemplo, en un bucle de espera), puede estar consumiendo tiempo de CPU, pero el tiempo transcurrido puede ser mayor si el programa está bloqueado por alguna condición.\n\n3. **El programa está haciendo llamadas a funciones de sistema que bloquean**: Si el programa está esperando a que se completen operaciones de sistema, como llamadas a `read()` o `write()`, el tiempo transcurrido puede ser mayor que el tiempo de CPU.\n\n### Investigación recomendada\n\nPara investigar estos casos, se pueden considerar las siguientes acciones:\n\n1. **Análisis de hilos**: Si el programa es multihilo, se puede usar herramientas como `htop`, `top`, o `ps` para observar el uso de CPU por hilo.\n\n2. **Monitoreo de I/O**: Usar herramientas como `iostat`, `strace`, o `perf` para observar si el programa está esperando I/O.\n\n3. **Análisis de uso de CPU**: Usar herramientas como `perf`, `gprof`, o `valgrind` para analizar el uso de CPU y detectar posibles cuellos de botella.\n\n4. **Revisión del código**: Revisar el código para identificar posibles áreas de espera o uso intensivo de CPU.\n\nEn resumen, la diferencia entre el tiempo de CPU y el tiempo transcurrido puede revelar información sobre el comportamiento del programa, especialmente en términos de paralelismo, espera de I/O y uso de recursos del sistema.",
+      "duration_seconds": 78.116,
+      "tool_calls": [],
+      "tool_results": [],
+      "error": null,
+      "evaluation": {
+        "concept_groups_met": 4,
+        "concept_groups_total": 4,
+        "missing_concept_groups": [],
+        "forbidden_claim_hits": [],
+        "deterministic_status": "pass",
+        "human_review_required": true
+      }
+    },
+    {
+      "id": "query-store",
+      "question": "¿Qué es Query Store y cómo lo usarías para investigar una regresión de rendimiento sin asumir que el plan más reciente es el culpable?",
+      "answer": "Query Store es una característica de SQL Server que captura y almacena las consultas ejecutadas en una base de datos, junto con información sobre sus rendimientos y planes de ejecución. Esto permite a los DBAs y desarrolladores analizar el comportamiento de las consultas a lo largo del tiempo, identificar regresiones de rendimiento y tomar decisiones informadas sobre optimización.\n\n### ¿Cómo usar Query Store para investigar una regresión de rendimiento sin asumir que el plan más reciente es el culpable?\n\n1. **Habilitar Query Store**:\n   Asegúrate de que Query Store esté habilitado en la base de datos. Puedes hacerlo con el siguiente comando:\n   ```sql\n   ALTER DATABASE [NombreDeBaseDeDatos] SET QUERY_STORE = ON;\n   ```\n\n2. **Revisar el rendimiento de las consultas**:\n   Usa las vistas del Query Store para examinar el rendimiento de las consultas. Por ejemplo:\n   ```sql\n   SELECT \n       qsq.query_id,\n       qsp.plan_id,\n       qsq.query_sql_text,\n       qsp.avg_duration,\n       qsp.avg_cpu_time,\n       qsp.avg_logical_reads\n   FROM sys.query_store_query qsq\n   JOIN sys.query_store_plan qsp ON qsq.query_id = qsp.query_id\n   ORDER BY qsp.avg_duration DESC;\n   ```\n   Esto te permite ver las consultas más lentas y sus planes de ejecución.\n\n3. **Comparar planes de ejecución**:\n   Para identificar si un plan específico es el culpable de la regresión, compara los planes de ejecución de las consultas con el tiempo. Puedes usar:\n   ```sql\n   SELECT \n       qsp.plan_id,\n       qsp.query_id,\n       qsp.plan_forcing_type_desc,\n       qsp.avg_duration,\n       qsp.avg_cpu_time,\n       qsp.avg_logical_reads\n   FROM sys.query_store_plan qsp\n   WHERE qsp.query_id = <ID_DE_LA_CONSULTA>\n   ORDER BY qsp.avg_duration DESC;\n   ```\n   Esto te permite ver cómo ha cambiado el rendimiento de un plan específico a lo largo del tiempo.\n\n4. **Analizar el historial de rendimiento**:\n   Usa las vistas de Query Store para analizar el historial de rendimiento de las consultas:\n   ```sql\n   SELECT \n       qst.execution_count,\n       qst.avg_duration,\n       qst.avg_cpu_time,\n       qst.avg_logical_reads,\n       qst.last_execution_time\n   FROM sys.query_store_runtime_stats qst\n   JOIN sys.query_store_plan qsp ON qst.plan_id = qsp.plan_id\n   WHERE qsp.query_id = <ID_DE_LA_CONSULTA>\n   ORDER BY qst.last_execution_time DESC;\n   ```\n   Esto te permite ver cómo ha evolucionado el rendimiento de la consulta a lo largo del tiempo.\n\n5. **Revisar el plan de ejecución más reciente**:\n   Aunque no se asume que el plan más reciente sea el culpable, es útil comparar el plan actual con los planes anteriores:\n   ```sql\n   SELECT \n       qsp.plan_id,\n       qsp.query_id,\n       qsp.plan_forcing_type_desc,\n       qsp.avg_duration,\n       qsp.avg_cpu_time,\n       qsp.avg_logical_reads\n   FROM sys.query_store_plan qsp\n   WHERE qsp.query_id = <ID_DE_LA_CONSULTA>\n   ORDER BY qsp.plan_id DESC;\n   ```\n   Esto te permite ver si el plan más reciente es el que está causando la regresión.\n\n6. **Forzar un plan específico (si es necesario)**:\n   Si identificas un plan más eficiente, puedes forzar su uso:\n   ```sql\n   EXEC sp_query_store_force_plan @query_id = <ID_DE_LA_CONSULTA>, @plan_id = <ID_DEL_PLAN>;\n   ```\n\n### Conclusión\n\nQuery Store es una herramienta poderosa para investigar regresiones de rendimiento. Al analizar el historial de consultas y sus planes de ejecución, puedes identificar si el problema es un plan específico o una combinación de factores. No se debe asumir que el plan más reciente es el culpable, ya que el problema puede estar en la evolución del rendimiento de la consulta o en cambios en los datos o en el entorno.",
+      "duration_seconds": 102.35,
+      "tool_calls": [],
+      "tool_results": [],
+      "error": null,
+      "evaluation": {
+        "concept_groups_met": 4,
+        "concept_groups_total": 5,
+        "missing_concept_groups": [
+          [
+            "runtime statistics",
+            "estadísticas de ejecución"
+          ]
+        ],
+        "forbidden_claim_hits": [],
+        "deterministic_status": "needs_review",
+        "human_review_required": true
+      }
+    },
+    {
+      "id": "blocking",
+      "question": "Usuarios reportan que una aplicación está congelada. Describe cómo distinguir blocking de una consulta simplemente lenta y qué datos recopilarías antes de matar una sesión.",
+      "answer": "Para distinguir entre una consulta bloqueada (blocking) y una consulta simplemente lenta, es importante entender el comportamiento de las sesiones en el sistema y recopilar información clave antes de tomar acciones como matar una sesión. A continuación se detalla cómo hacerlo:\n\n### Diferencia entre una consulta bloqueada y una lenta\n\n1. **Consulta lenta**: Es una consulta que tarda mucho en ejecutarse, pero que no está bloqueando otras consultas. Puede estar realizando operaciones intensivas como lecturas de grandes volúmenes de datos, cálculos complejos o falta de índices adecuados.\n\n2. **Consulta bloqueada**: Es una consulta que está esperando un recurso (por ejemplo, un bloqueo de tabla o fila) que otro proceso tiene en uso. Esto impide que otras consultas continúen ejecutándose hasta que se libere el recurso bloqueado.\n\n### Cómo distinguir entre ambas\n\n- **Verificar el estado de las sesiones**: En sistemas como MySQL o PostgreSQL, puedes revisar el estado de las sesiones activas para identificar si hay bloqueos.\n- **Revisar las consultas en ejecución**: Si una consulta está esperando un recurso, es probable que esté bloqueada. Si simplemente tarda en ejecutarse, puede ser lenta pero no bloqueada.\n- **Revisar el tiempo de espera**: Las consultas bloqueadas suelen tener tiempos de espera prolongados, mientras que las lentas pueden tener tiempos de ejecución altos pero sin bloqueos.\n\n### Datos a recopilar antes de matar una sesión\n\nAntes de matar una sesión, es crucial recopilar información para evitar interrumpir operaciones críticas o causar daños:\n\n1. **ID de la sesión**: Identificar la sesión específica que se desea matar.\n2. **Consulta en ejecución**: Obtener la consulta que está corriendo en la sesión.\n3. **Tiempo de ejecución**: Verificar cuánto tiempo lleva la consulta en ejecución.\n4. **Estado de la sesión**: Determinar si la sesión está bloqueando otras consultas o simplemente es lenta.\n5. **Recursos consumidos**: Revisar el uso de CPU, memoria y E/S por parte de la sesión.\n6. **Bloqueos activos**: Si hay bloqueos, identificar qué recursos están bloqueados y por qué.\n\n### Pasos a seguir\n\n1. **Revisar sesiones activas**:\n   - En MySQL, puedes usar `SHOW PROCESSLIST` o `information_schema.PROCESSLIST`.\n   - En PostgreSQL, puedes usar `pg_stat_activity`.\n\n2. **Identificar bloqueos**:\n   - En MySQL, usa `SHOW ENGINE INNODB STATUS` o consultas en `information_schema`.\n   - En PostgreSQL, consulta `pg_locks` y `pg_stat_activity`.\n\n3. **Recolectar datos de la sesión**:\n   - Obtén la consulta en ejecución.\n   - Revisa el tiempo de ejecución.\n   - Verifica si hay bloqueos.\n\n4. **Decidir si matar la sesión**:\n   - Si la sesión está bloqueando otras, puede ser necesario matarla.\n   - Si es solo lenta, considera optimizar la consulta o ajustar recursos.\n\n### Ejemplo de consulta para identificar bloqueos en MySQL\n\n```sql\nSELECT \n    ID, \n    USER, \n    HOST, \n    DB, \n    COMMAND, \n    TIME, \n    STATE, \n    INFO \nFROM \n    information_schema.PROCESSLIST \nWHERE \n    COMMAND != 'Sleep' \n    AND TIME > 60;\n```\n\n### Ejemplo de consulta para identificar bloqueos en PostgreSQL\n\n```sql\nSELECT \n    pid, \n    usename, \n    query, \n    wait_event_type, \n    wait_event, \n    state \nFROM \n    pg_stat_activity \nWHERE \n    state = 'active' \n    AND query != '<insufficient privilege>';\n```\n\n### Conclusión\n\nDistinguir entre una consulta bloqueada y una lenta es fundamental para mantener el rendimiento del sistema. Recopilar datos como el tiempo de ejecución, el estado de la sesión y los recursos consumidos permite tomar decisiones informadas antes de matar una sesión. Si la sesión está bloqueando otras, es posible que sea necesario matarla; si solo es lenta, se puede considerar una optimización o ajuste de recursos.",
+      "duration_seconds": 104.566,
+      "tool_calls": [],
+      "tool_results": [],
+      "error": null,
+      "evaluation": {
+        "concept_groups_met": 2,
+        "concept_groups_total": 5,
+        "missing_concept_groups": [
+          [
+            "blocking_session_id",
+            "sesión bloqueadora",
+            "head blocker"
+          ],
+          [
+            "transaction",
+            "transacción"
+          ],
+          [
+            "dm_exec_requests",
+            "dm_os_waiting_tasks",
+            "dm_tran_locks",
+            "dmv"
+          ]
+        ],
+        "forbidden_claim_hits": [],
+        "deterministic_status": "needs_review",
+        "human_review_required": true
+      }
+    },
+    {
+      "id": "deadlock",
+      "question": "Explica qué es un deadlock, cómo difiere de blocking prolongado y cómo analizarías un deadlock XML para encontrar víctima, recursos y orden de acceso.",
+      "answer": "Un **deadlock** (interbloqueo) es una situación en la que dos o más procesos o hilos se quedan bloqueados indefinidamente, esperando que otros procesos/liberan recursos que ellos mismos poseen, creando un círculo vicioso. En el contexto de bases de datos, esto ocurre cuando múltiples transacciones intentan acceder a recursos (como filas o tablas) que están bloqueados por otras transacciones, y ninguna puede avanzar.\n\n### Diferencias entre Deadlock y Blocking Prolongado\n\n- **Deadlock**: Es una condición de bloqueo permanente donde al menos dos transacciones esperan recursos entre sí, sin posibilidad de resolver el bloqueo sin una intervención externa (como cancelar una transacción).\n- **Blocking Prolongado**: Es una situación en la que una transacción espera un recurso que otro proceso tiene bloqueado, pero el bloqueo no es permanente. Puede resolverse con el tiempo o al liberar el recurso por parte del proceso que lo posee.\n\n### Análisis de un XML de Deadlock\n\nPara analizar un XML de deadlock en SQL Server, puedes usar el evento `xml_deadlock_report` que se genera cuando ocurre un deadlock. Este XML contiene información sobre:\n\n1. **Víctima**: La transacción que fue cancelada para resolver el deadlock.\n2. **Recursos involucrados**: Las tablas, filas o índices bloqueados.\n3. **Orden de acceso**: El orden en el que las transacciones intentaron acceder a los recursos.\n\n#### Ejemplo de estructura de XML de deadlock:\n\n```xml\n<deadlock>\n  <victim-list>\n    <victimProcess id=\"process123456\" />\n  </victim-list>\n  <process-list>\n    <process id=\"process123456\" taskpriority=\"0\" logused=\"0\" waitresource=\"KEY: 123456789012 (123456789012)\" waittime=\"12345\" ownerId=\"1234567890\" transactionname=\"UPDATE\" lasttranstarted=\"2023-01-01T00:00:00\" XDES=\"0x1234567890\" lockMode=\"U\" schedulerid=\"1\" kpid=\"1234\" spid=\"56\" sbid=\"0\" ecid=\"0\" priority=\"0\" transcount=\"1\" isolationlevel=\"read committed\" xactid=\"1234567890\" currentdb=\"12\" lockTimeout=\"4294967295\" clientapp=\"Microsoft SQL Server\" hostname=\"HOSTNAME\" hostpid=\"1234\" loginname=\"user\" isolationlevel=\"read committed\" />\n    <process id=\"process234567\" taskpriority=\"0\" logused=\"0\" waitresource=\"KEY: 123456789012 (123456789012)\" waittime=\"12345\" ownerId=\"1234567890\" transactionname=\"UPDATE\" lasttranstarted=\"2023-01-01T00:01:00\" XDES=\"0x1234567890\" lockMode=\"U\" schedulerid=\"1\" kpid=\"1235\" spid=\"57\" sbid=\"0\" ecid=\"0\" priority=\"0\" transcount=\"1\" isolevel=\"read committed\" xactid=\"1234567891\" currentdb=\"12\" lockTimeout=\"4294967295\" clientapp=\"Microsoft SQL Server\" hostname=\"HOSTNAME\" hostpid=\"1235\" loginname=\"user\" isolationlevel=\"read committed\" />\n  </process-list>\n  <resource-list>\n    <keylock hobtid=\"123456789012\" dbid=\"12\" objectname=\"dbo.Table1\" indexname=\"PK_Table1\" id=\"lock123456789012\" mode=\"U\" associatedObjectId=\"123456789012\">\n      <owner-list>\n        <owner id=\"process234567\" mode=\"U\" />\n      </owner-list>\n      <waiter-list>\n        <waiter id=\"process123456\" mode=\"U\" />\n      </waiter-list>\n    </keylock>\n  </resource-list",
+      "duration_seconds": 111.148,
+      "tool_calls": [],
+      "tool_results": [],
+      "error": null,
+      "evaluation": {
+        "concept_groups_met": 3,
+        "concept_groups_total": 5,
+        "missing_concept_groups": [
+          [
+            "cycle",
+            "ciclo"
+          ],
+          [
+            "deadlock xml",
+            "extended events",
+            "system_health"
+          ]
+        ],
+        "forbidden_claim_hits": [],
+        "deterministic_status": "needs_review",
+        "human_review_required": true
+      }
+    },
+    {
+      "id": "tempdb",
+      "question": "¿Qué funciones cumple tempdb y cómo investigarías contención o crecimiento anormal sin recomendar aumentar archivos de forma automática?",
+      "answer": "He creado un documento detallado sobre las funciones de tempdb y cómo investigar contención o crecimiento anormal sin recomendar aumentar archivos automáticamente. El documento incluye:\n\n1. Las funciones principales de tempdb en SQL Server\n2. Pasos específicos para investigar problemas de contención o crecimiento anormal\n3. Métodos para analizar el uso de espacio temporal\n4. Recomendaciones de optimización sin aumentar automáticamente los archivos\n\n¿Te gustaría que profundice en algún aspecto específico del documento o necesitas ayuda con la implementación de alguna de las técnicas de investigación mencionadas?",
+      "duration_seconds": 120.518,
+      "tool_calls": [
+        "write_file"
+      ],
+      "tool_results": [
+        "Archivo escrito: tempdb_investigation.md (3913 bytes)"
+      ],
+      "error": null,
+      "evaluation": {
+        "concept_groups_met": 3,
+        "concept_groups_total": 5,
+        "missing_concept_groups": [
+          [
+            "version store"
+          ],
+          [
+            "sort",
+            "hash",
+            "spill"
+          ]
+        ],
+        "forbidden_claim_hits": [],
+        "deterministic_status": "needs_review",
+        "human_review_required": true
+      }
+    },
+    {
+      "id": "login-user-auth",
+      "question": "Distingue login, database user, authentication y authorization en SQL Server. Incluye el principio de mínimo privilegio.",
+      "answer": "# Conceptos de Login, Database User, Authentication y Authorization en SQL Server\n\n## Login\n\nUn **login** en SQL Server es una identidad que permite a un usuario acceder al servidor SQL Server. Es el primer nivel de seguridad y se crea a nivel de servidor. Los logins pueden ser de diferentes tipos:\n\n- **Logins de Windows**: Basados en cuentas de Windows\n- **Logins SQL Server**: Creados específicamente para SQL Server\n- **Logins de Azure AD**: Para integración con Azure Active Directory\n\n## Database User\n\nUn **database user** es una identidad que se asocia con un login y permite acceder a una base de datos específica. Un login puede tener múltiples usuarios en diferentes bases de datos. Los usuarios de base de datos se crean dentro de una base de datos específica.\n\n## Authentication\n\nLa **authentication** (autenticación) es el proceso de verificar la identidad de un usuario. En SQL Server, esto implica:\n\n1. Verificar que el login exista\n2. Validar las credenciales proporcionadas\n3. Establecer la conexión al servidor\n\n## Authorization\n\nLa **authorization** (autorización) es el proceso de determinar qué recursos puede acceder un usuario y qué acciones puede realizar. Esto incluye:\n\n- Permisos a tablas, vistas, procedimientos almacenados\n- Acceso a bases de datos\n- Capacidad de ejecutar ciertos tipos de operaciones\n\n## Principio de Mínimo Privilegio\n\nEl **principio de mínimo privilegio** es una práctica de seguridad fundamental que establece que un usuario debe tener solo los permisos necesarios para realizar sus tareas. En SQL Server:\n\n- Asignar permisos específicos en lugar de roles amplios\n- Revisar regularmente los permisos asignados\n- Eliminar permisos innecesarios\n- Usar roles predefinidos cuando sea posible\n\n## Relación entre Conceptos\n\n1. Un **login** se crea en el servidor SQL Server\n2. Un **database user** se crea dentro de una base de datos específica\n3. El **login** se asocia con el **database user**\n4. La **authentication** verifica la identidad del login\n5. La **authorization** determina qué puede hacer el database user\n\n## Ejemplos Prácticos\n\n### Crear un login:\n```sql\nCREATE LOGIN [mi_usuario] WITH PASSWORD = 'contraseña_segura';\n```\n\n### Crear un database user:\n```sql\nUSE [mi_base_de_datos];\nCREATE USER [mi_usuario] FOR LOGIN [mi_usuario];\n```\n\n### Asignar permisos:\n```sql\nGRANT SELECT, INSERT, UPDATE ON [tabla] TO [mi_usuario];\n```\n\n## Buenas Prácticas\n\n1. Usar logins de Windows cuando sea posible\n2. Implementar el principio de mínimo privilegio\n3. Revisar regularmente los permisos\n4. Usar roles predefinidos para asignar permisos\n5. No otorgar permisos de administrador a usuarios normales",
+      "duration_seconds": 178.379,
+      "tool_calls": [
+        "list_files",
+        "list_files",
+        "write_file"
+      ],
+      "tool_results": [
+        "[FILE] diagnostic_flow.md\n[FILE] plan_explanation.md\n[DIR] proyecto-demo\n[FILE] prueba.txt\n[FILE] statistics_io_analysis.md\n[FILE] tempdb_investigation.md",
+        "[FILE] indice-clustered-vs-nonclustered.md\n[FILE] main.py",
+        "Archivo escrito: sql_server_concepts.md (2670 bytes)"
+      ],
+      "error": null,
+      "evaluation": {
+        "concept_groups_met": 5,
+        "concept_groups_total": 5,
+        "missing_concept_groups": [],
+        "forbidden_claim_hits": [],
+        "deterministic_status": "pass",
+        "human_review_required": true
+      }
+    },
+    {
+      "id": "statistics",
+      "question": "¿Qué son las estadísticas del optimizador de SQL Server, cómo influyen en cardinalidad y por qué actualizarlas no garantiza por sí solo un buen plan?",
+      "answer": "Las estadísticas del optimizador de SQL Server son datos que proporcionan información sobre la distribución de los valores en las columnas de las tablas. Estas estadísticas son fundamentales para que el optimizador de consultas tome decisiones informadas sobre cómo ejecutar una consulta, especialmente en cuanto a la elección de índices y la estimación de la cardinalidad (el número de filas que se esperan devolver).\n\n### ¿Qué son las estadísticas del optimizador de SQL Server?\n\nLas estadísticas incluyen información como:\n- El número total de filas en la tabla.\n- La distribución de valores en las columnas.\n- El número de valores únicos.\n- La densidad de los valores.\n- Los valores extremos (mínimo y máximo).\n\nSQL Server utiliza estas estadísticas para calcular la **cardinalidad estimada** de las operaciones de consulta, como filtros, uniones y agrupaciones. Esta estimación es crucial para determinar el plan de ejecución más eficiente.\n\n### ¿Cómo influyen en la cardinalidad?\n\nLa **cardinalidad estimada** es la cantidad de filas que el optimizador espera que una operación devuelva. Si las estadísticas son precisas, el optimizador puede estimar correctamente la cantidad de filas y, por lo tanto, elegir el plan de ejecución más eficiente. Por ejemplo:\n\n- Si se estima que una consulta devolverá 1000 filas, el optimizador puede decidir usar un índice.\n- Si se estima que devolverá 10 millones de filas, puede optar por una tabla completa.\n\n### ¿Por qué actualizar las estadísticas no garantiza un buen plan?\n\nAunque actualizar las estadísticas es importante, **no garantiza por sí solo un buen plan de ejecución** por varias razones:\n\n1. **Las estadísticas pueden ser incompletas o desactualizadas**: Aunque se actualicen, pueden no reflejar la distribución real de los datos si hay cambios frecuentes o patrones de acceso inusuales.\n   \n2. **Las estadísticas no capturan la correlación entre columnas**: El optimizador puede no tener información sobre cómo se relacionan entre sí las columnas, lo que puede afectar la precisión de las estimaciones.\n\n3. **El optimizador puede no elegir el mejor plan**: Incluso con estadísticas precisas, el optimizador puede tomar decisiones basadas en heurísticas o limitaciones del planificador, especialmente en consultas complejas.\n\n4. **Falta de información sobre el contexto de ejecución**: Las estadísticas son estáticas y no reflejan el comportamiento dinámico de la base de datos en tiempo real.\n\n5. **Índices mal diseñados o ausentes**: Aunque las estadísticas estén actualizadas, si no hay índices adecuados o están mal configurados, el plan de ejecución puede no ser óptimo.\n\n### Conclusión\n\nLas estadísticas son una parte esencial del proceso de optimización, pero no son suficientes por sí solas. Es importante mantenerlas actualizadas, pero también es necesario considerar otros factores como el diseño de índices, el uso de sugerencias de planificación (como `OPTION (RECOMPILE)` o `OPTION (OPTIMIZE FOR)`), y el análisis de planes de ejecución para asegurar un rendimiento óptimo.\n\nSi necesitas ayuda para revisar o actualizar estadísticas en SQL Server, puedo guiarte paso a paso.",
+      "duration_seconds": 79.451,
+      "tool_calls": [],
+      "tool_results": [],
+      "error": null,
+      "evaluation": {
+        "concept_groups_met": 4,
+        "concept_groups_total": 5,
+        "missing_concept_groups": [
+          [
+            "histogram",
+            "histograma"
+          ]
+        ],
+        "forbidden_claim_hits": [],
+        "deterministic_status": "needs_review",
+        "human_review_required": true
+      }
+    },
+    {
+      "id": "fragmentation",
+      "question": "Un índice muestra 45% de fragmentación. ¿Es suficiente para ordenar un REBUILD? Explica cuándo importa realmente la fragmentación y qué otros factores revisarías.",
+      "answer": "La fragmentación del índice al 45% es un indicador significativo, pero no necesariamente suficiente por sí solo para justificar un `REBUILD`. Para tomar una decisión informada, es importante entender cuándo la fragmentación es realmente problemática y qué otros factores hay que considerar.\n\n### ¿Cuándo importa la fragmentación?\n\nLa fragmentación de un índice afecta el rendimiento de las consultas, especialmente cuando:\n\n1. **Se realizan búsquedas de rango (range scans)**: La fragmentación puede hacer que el motor tenga que hacer más E/S para acceder a los datos.\n2. **Se realizan búsquedas de valor exacto (exact key lookups)**: Aunque menos afectadas, aún pueden verse impactadas si el índice está muy fragmentado.\n3. **Se realizan operaciones de mantenimiento**: Un índice muy fragmentado puede ralentizar las operaciones de inserción, actualización y eliminación.\n\n### ¿Cuándo se recomienda un `REBUILD`?\n\nGeneralmente, se recomienda un `REBUILD` cuando:\n\n- La fragmentación supera el 30% (aunque esto puede variar según el entorno).\n- Hay un impacto observable en el rendimiento de las consultas.\n- El índice se usa frecuentemente y se espera un aumento en la carga de trabajo.\n\nEn tu caso, un 45% de fragmentación es significativo y probablemente ya esté afectando el rendimiento, especialmente si el índice se usa con frecuencia.\n\n### Otros factores a revisar\n\nAdemás de la fragmentación, hay otros factores que debes considerar:\n\n1. **Tamaño del índice**: Un índice muy grande puede requerir más tiempo y recursos para un `REBUILD`.\n2. **Frecuencia de uso**: Si el índice se usa muy poco, podría no ser prioritario.\n3. **Recursos del sistema**: El `REBUILD` es una operación intensiva en recursos. Es importante evaluar si el sistema puede soportarla sin afectar otras operaciones.\n4. **Ventana de mantenimiento**: Si el sistema tiene una ventana de mantenimiento limitada, podría ser necesario programar el `REBUILD` para un momento en el que no haya alta carga.\n5. **Impacto en el rendimiento**: Puedes usar herramientas como `SET STATISTICS IO ON` o `SET STATISTICS TIME ON` para medir el impacto real antes y después de la fragmentación.\n\n### Conclusión\n\nUn 45% de fragmentación es suficiente para considerar un `REBUILD`, especialmente si hay un impacto observable en el rendimiento. Sin embargo, es importante evaluar el contexto completo del sistema y los recursos disponibles antes de tomar la decisión. Si el índice se usa frecuentemente y hay una ventana de mantenimiento disponible, un `REBUILD` es una buena opción para mejorar el rendimiento.\n\nSi necesitas ayuda para ejecutar un `REBUILD` o para monitorear el rendimiento, dime y puedo guiarte paso a paso.",
+      "duration_seconds": 69.147,
+      "tool_calls": [],
+      "tool_results": [],
+      "error": null,
+      "evaluation": {
+        "concept_groups_met": 5,
+        "concept_groups_total": 5,
+        "missing_concept_groups": [],
+        "forbidden_claim_hits": [],
+        "deterministic_status": "pass",
+        "human_review_required": true
+      }
+    },
+    {
+      "id": "index-tradeoffs",
+      "question": "Te piden crear un índice para acelerar un SELECT. Enumera la evidencia y los trade-offs que evaluarías: reads, writes, storage, maintenance, selectivity, covering y key order.",
+      "answer": "Para crear un índice que acelere un `SELECT`, es fundamental evaluar varios aspectos que impactan el rendimiento, el mantenimiento y la eficiencia del sistema. A continuación, se enumeran los factores clave que se deben considerar, junto con su evidencia y trade-offs:\n\n---\n\n### 1. **Reads (Lecturas)**\n**Evidencia:** Los índices mejoran el rendimiento de las consultas `SELECT` al permitir una búsqueda más rápida en lugar de escanear toda la tabla.\n\n**Trade-offs:**\n- **Ventaja:** Reducción del tiempo de ejecución de consultas que filtran por columnas indexadas.\n- **Desventaja:** Los índices consumen espacio adicional y pueden ralentizar las operaciones de escritura.\n\n---\n\n### 2. **Writes (Escrituras)**\n**Evidencia:** Cada inserción, actualización o eliminación en una tabla con índices requiere actualizar también los índices asociados.\n\n**Trade-offs:**\n- **Ventaja:** No hay mejora directa en escritura.\n- **Desventaja:** Aumento del tiempo de escritura debido a la necesidad de mantener los índices.\n\n---\n\n### 3. **Storage (Almacenamiento)**\n**Evidencia:** Los índices ocupan espacio adicional en disco y memoria.\n\n**Trade-offs:**\n- **Ventaja:** Puede ser insignificante si el índice es pequeño.\n- **Desventaja:** Puede ser significativo si hay muchos índices o columnas grandes.\n\n---\n\n### 4. **Maintenance (Mantenimiento)**\n**Evidencia:** Los índices deben mantenerse actualizados con cada cambio en los datos.\n\n**Trade-offs:**\n- **Ventaja:** Puede ser automático en sistemas modernos.\n- **Desventaja:** Aumenta la carga de mantenimiento del sistema, especialmente en tablas con alta actividad de escritura.\n\n---\n\n### 5. **Selectivity (Selectividad)**\n**Evidencia:** Un índice es más útil si la columna tiene alta selectividad (muchos valores únicos).\n\n**Trade-offs:**\n- **Ventaja:** Mejora significativa en consultas con filtros selectivos.\n- **Desventaja:** Puede ser ineficaz si la columna tiene pocos valores únicos (por ejemplo, una columna de tipo `boolean`).\n\n---\n\n### 6. **Covering (Cobertura)**\n**Evidencia:** Un índice \"covering\" incluye todas las columnas necesarias para una consulta, evitando el acceso a la tabla.\n\n**Trade-offs:**\n- **Ventaja:** Mejora el rendimiento al evitar lecturas adicionales.\n- **Desventaja:** Aumenta el tamaño del índice y puede ralentizar las operaciones de escritura.\n\n---\n\n### 7. **Key Order (Orden de las Claves)**\n**Evidencia:** El orden de las columnas en el índice afecta la eficiencia de las consultas.\n\n**Trade-offs:**\n- **Ventaja:** Un buen orden puede mejorar el rendimiento de consultas con múltiples condiciones.\n- **Desventaja:** Un orden inadecuado puede hacer que el índice sea ineficaz para ciertas consultas.\n\n---\n\n### Resumen de Consideraciones\n\n| Factor        | Evidencia | Trade-offs |\n|---------------|-----------|------------|\n| Reads         | Mejora el tiempo de consulta | Aumenta el costo de escritura |\n| Writes        | Requiere actualización de índice | Ralentiza las operaciones de escritura |\n| Storage       | Ocupa espacio adicional | Puede ser significativo |\n| Maintenance   | Requiere mantenimiento continuo | Aumenta carga del sistema |\n| Selectivity   | Índices útiles en columnas con alta selectividad | Ineficaz en columnas con pocos valores únicos |\n| Covering      | Evita acceso a tabla | Aumenta tamaño del índice |\n| Key Order     | Afecta eficiencia de consultas | Requiere planificación cuidadosa |\n\n---\n\n### Recomendación Final\nAntes de crear un índice, se debe analizar el patrón de consultas (`SELECT`) y el volumen de datos. Se recomienda usar herramientas como `EXPLAIN` o `EXPLAIN ANALYZE` para evaluar el impacto real del índice en el rendimiento. Además, se debe considerar el equilibrio entre los beneficios de las lecturas y los costos asociados a las escrituras y mantenimiento.",
+      "duration_seconds": 106.077,
+      "tool_calls": [],
+      "tool_results": [],
+      "error": null,
+      "evaluation": {
+        "concept_groups_met": 7,
+        "concept_groups_total": 7,
+        "missing_concept_groups": [],
+        "forbidden_claim_hits": [],
+        "deterministic_status": "pass",
+        "human_review_required": true
+      }
+    },
+    {
+      "id": "transaction-log-chain",
+      "question": "En recovery model FULL, ¿qué condiciones permiten recuperación point-in-time y qué papel tienen la cadena de log, un tail-log backup y WITH NORECOVERY/RECOVERY?",
+      "answer": "En un modelo de recuperación FULL, la recuperación point-in-time (PITR) es posible gracias a ciertas condiciones y al uso adecuado de los registros de transacción (log) y las copias de seguridad. A continuación se explican las condiciones necesarias, el papel de la cadena de registros de transacción, el tail-log backup y el uso de `WITH NORECOVERY` y `WITH RECOVERY`.\n\n### Condiciones para la recuperación point-in-time en el modelo FULL:\n\n1. **Modelo de recuperación FULL**: El modelo de recuperación debe estar configurado como `FULL` para que se registren todos los cambios en el registro de transacción (transaction log).\n2. **Copia de seguridad del registro de transacción (Transaction Log Backup)**: Es necesario realizar copias de seguridad del registro de transacción periódicamente. Estas copias son esenciales para poder restaurar la base de datos hasta un punto específico.\n3. **Copia de seguridad completa (Full Backup)**: Debe existir una copia de seguridad completa de la base de datos como punto de partida para la restauración.\n4. **Cadena de copias de seguridad del registro de transacción**: Las copias de seguridad del registro de transacción deben ser consecutivas y completas para permitir la restauración hasta un punto específico.\n\n### Papel de la cadena de registros de transacción:\n\nLa cadena de registros de transacción es una secuencia de copias de seguridad del registro de transacción que se han realizado desde la última copia de seguridad completa. Esta cadena permite restaurar la base de datos hasta un punto específico en el tiempo, ya que cada copia de seguridad del registro contiene los cambios realizados desde la anterior.\n\n### Tail-log backup:\n\nUn tail-log backup (copia de seguridad del final del registro) es una copia de seguridad del registro de transacción que se realiza justo antes de restaurar una base de datos. Se usa para capturar los cambios que ocurrieron después de la última copia de seguridad del registro y antes de la restauración. Esto es especialmente útil cuando se restaura una base de datos en un estado de error o cuando se necesita restaurar hasta un punto específico.\n\n### WITH NORECOVERY y WITH RECOVERY:\n\n- **WITH NORECOVERY**: Se usa al restaurar una copia de seguridad para evitar que la base de datos se active inmediatamente. Esto permite restaurar más copias de seguridad (por ejemplo, copias de seguridad del registro de transacción) sin interrumpir la base de datos. Es útil cuando se restauran copias de seguridad en orden, como en una cadena de restauración.\n  \n- **WITH RECOVERY**: Se usa al restaurar la última copia de seguridad para activar la base de datos y aplicar todos los cambios pendientes. Esto hace que la base de datos esté disponible nuevamente.\n\n### Ejemplo de restauración point-in-time:\n\n1. Restaurar la copia de seguridad completa.\n2. Restaurar las copias de seguridad del registro de transacción en orden, usando `WITH NORECOVERY` para todas menos la última.\n3. Restaurar la última copia de seguridad del registro de transacción con `WITH RECOVERY` para activar la base de datos.\n\nEste proceso permite restaurar la base de datos hasta un punto específico en el tiempo, siempre que se tengan las copias de seguridad necesarias y se mantenga la cadena de registros de transacción.\n\n### Resumen:\n\n- El modelo de recuperación FULL es necesario.\n- Se requieren copias de seguridad completas y del registro de transacción.\n- La cadena de copias de seguridad del registro permite restaurar hasta un punto específico.\n- El tail-log backup es útil para capturar cambios recientes.\n- `WITH NORECOVERY` permite restaurar múltiples copias de seguridad sin activar la base de datos.\n- `WITH RECOVERY` activa la base de datos tras restaurar todas las copias necesarias.\n\nSi necesitas ayuda con ejemplos prácticos o comandos SQL específicos, dime.",
+      "duration_seconds": 92.834,
+      "tool_calls": [],
+      "tool_results": [],
+      "error": null,
+      "evaluation": {
+        "concept_groups_met": 4,
+        "concept_groups_total": 5,
+        "missing_concept_groups": [
+          [
+            "log chain",
+            "cadena de log"
+          ]
+        ],
+        "forbidden_claim_hits": [],
+        "deterministic_status": "needs_review",
+        "human_review_required": true
+      }
+    },
+    {
+      "id": "isolation-blocking",
+      "question": "Relaciona transacciones, niveles de aislamiento, locks, row versioning y blocking. ¿Por qué NOLOCK no debe proponerse como solución universal?",
+      "answer": "A continuación, se presenta una explicación detallada sobre la relación entre transacciones, niveles de aislamiento, locks, row versioning y blocking, así como por qué NOLOCK no debe considerarse una solución universal.\n\n### Relación entre Transacciones, Niveles de Aislamiento, Locks, Row Versioning y Blocking\n\n1. **Transacciones**:\n   - Una transacción es una unidad lógica de trabajo que incluye una o más operaciones en una base de datos.\n   - Las transacciones deben cumplir con las propiedades ACID (Atomicity, Consistency, Isolation, Durability).\n\n2. **Niveles de Aislamiento**:\n   - Establecen el grado de aislamiento entre transacciones concurrentes.\n   - Niveles comunes:\n     - **READ UNCOMMITTED**: Permite lecturas sucias (dirty reads).\n     - **READ COMMITTED**: Evita lecturas sucias, pero permite lecturas no repetibles.\n     - **REPEATABLE READ**: Evita lecturas no repetibles, pero permite phantom reads.\n     - **SERIALIZABLE**: El nivel más restrictivo, evita todos los tipos de inconsistencias.\n     - **SNAPSHOT ISOLATION**: Utiliza row versioning para evitar bloqueos.\n\n3. **Locks (Bloqueos)**:\n   - Los bloqueos son mecanismos de concurrencia que impiden que múltiples transacciones modifiquen los mismos datos simultáneamente.\n   - Tipos de bloqueos:\n     - **Shared Locks (S)**: Permiten lecturas, bloquean escrituras.\n     - **Exclusive Locks (X)**: Permiten lecturas y escrituras, bloquean todo tipo de acceso.\n   - Los bloqueos pueden provocar **blocking** cuando una transacción espera a que otra libere un recurso.\n\n4. **Row Versioning**:\n   - Es una técnica usada en niveles de aislamiento como **SNAPSHOT ISOLATION** y **READ COMMITTED SNAPSHOT**.\n   - Permite a las transacciones leer versiones antiguas de las filas sin bloquearlas, evitando bloqueos de lectura.\n   - Se almacena una copia de las versiones anteriores en `tempdb`.\n\n5. **Blocking**:\n   - Ocurre cuando una transacción bloquea a otra, generalmente por un bloqueo (lock) que no se libera.\n   - Puede ser causado por:\n     - Transacciones largas.\n     - Bloqueos compartidos o exclusivos no liberados.\n     - Nivel de aislamiento inapropiado.\n\n### ¿Por qué NOLOCK no debe proponerse como solución universal?\n\n- **NOLOCK** es un hint de SQL Server que evita la adquisición de bloqueos compartidos (S) durante las lecturas.\n- Aunque puede mejorar el rendimiento al evitar bloqueos, tiene varios inconvenientes:\n  - **Lecturas sucias (Dirty Reads)**: Puede leer datos que no han sido confirmados por la transacción que los modificó.\n  - **No se respeta el nivel de aislamiento**: Puede romper la consistencia de los datos.\n  - **No es adecuado para aplicaciones críticas**: Puede provocar inconsistencias en datos sensibles.\n  - **No es una solución a largo plazo**: No resuelve los problemas subyacentes de bloqueo o concurrencia.\n\n### Conclusión\n\n- Los niveles de aislamiento, los bloqueos y el row versioning son mecanismos fundamentales para mantener la integridad de los datos en una base de datos.\n- NOLOCK, aunque útil en ciertos contextos (como reportes en tiempo real), no debe ser una solución universal debido a los riesgos de inconsistencia y pérdida de datos.\n\nSi necesitas un ejemplo práctico o más detalles sobre cómo se implementan estos conceptos en SQL Server, dime y puedo proporcionarte ejemplos o scripts.",
+      "duration_seconds": 93.475,
+      "tool_calls": [
+        "list_files"
+      ],
+      "tool_results": [
+        "[FILE] diagnostic_flow.md\n[FILE] plan_explanation.md\n[DIR] proyecto-demo\n[FILE] prueba.txt\n[FILE] sql_server_concepts.md\n[FILE] statistics_io_analysis.md\n[FILE] tempdb_investigation.md"
+      ],
+      "error": null,
+      "evaluation": {
+        "concept_groups_met": 5,
+        "concept_groups_total": 5,
+        "missing_concept_groups": [],
+        "forbidden_claim_hits": [],
+        "deterministic_status": "pass",
+        "human_review_required": true
+      }
+    },
+    {
+      "id": "spill-warning",
+      "question": "Un Actual Execution Plan muestra un Hash Match con spill a tempdb. Explica qué hechos aporta esa advertencia, causas posibles y qué medirías antes de cambiar memoria, índices o consulta.",
+      "answer": "La advertencia de \"Hash Match con spill a tempdb\" en un plan de ejecución de SQL Server indica que el motor de base de datos tuvo que usar el disco (tempdb) para almacenar datos temporales durante la operación de hash, lo cual puede afectar el rendimiento. A continuación, te explico los hechos que aporta esta advertencia, las causas posibles y qué medirías antes de tomar acciones como ajustar memoria, índices o la consulta.\n\n### Hechos aportados por la advertencia\n\n1. **Uso de tempdb**: El motor de SQL Server tuvo que usar `tempdb` para almacenar datos temporales durante la operación de hash.\n2. **Spill**: El término \"spill\" indica que los datos no cabían en la memoria asignada, por lo tanto, se movieron al disco.\n3. **Rendimiento potencialmente afectado**: El acceso a disco es significativamente más lento que el acceso a memoria, lo que puede ralentizar la consulta.\n\n### Causas posibles\n\n1. **Insuficiencia de memoria**: La memoria disponible para la operación de hash es insuficiente.\n2. **Consulta compleja**: La consulta involucra grandes conjuntos de datos o operaciones de hash complejas.\n3. **Falta de índices adecuados**: La falta de índices puede forzar a SQL Server a realizar operaciones costosas como hash joins.\n4. **Configuración de memoria**: La memoria asignada a SQL Server podría no ser suficiente para manejar las operaciones de hash sin recurrir a tempdb.\n\n### Qué medirías antes de cambiar memoria, índices o consulta\n\n1. **Uso de memoria por consulta**:\n   - Revisa el uso de memoria en la consulta usando `sys.dm_exec_query_memory_grants` o `sys.dm_exec_requests`.\n   - Identifica si hay consultas que están usando más memoria de la disponible.\n\n2. **Estadísticas de rendimiento**:\n   - Usa `sys.dm_exec_query_stats` para obtener información sobre el rendimiento de la consulta.\n   - Revisa el plan de ejecución con `SET STATISTICS IO ON` o `SET STATISTICS TIME ON`.\n\n3. **Uso de tempdb**:\n   - Revisa el uso de `tempdb` para ver si hay un aumento significativo en el uso de disco.\n   - Verifica el tamaño de `tempdb` y el espacio disponible.\n\n4. **Configuración de SQL Server**:\n   - Revisa la configuración de memoria de SQL Server (`max server memory`, `min server memory`).\n   - Asegúrate de que la memoria asignada a SQL Server es adecuada para el volumen de datos y la carga de trabajo.\n\n5. **Índices y estructura de datos**:\n   - Evalúa la existencia y eficacia de los índices en las columnas usadas en las operaciones de hash.\n   - Considera si hay necesidad de crear índices o reestructurar las tablas.\n\n6. **Plan de ejecución**:\n   - Examina el plan de ejecución detallado para identificar posibles cuellos de congestión.\n   - Verifica si hay operaciones de hash innecesarias o si se pueden reescribir las consultas para evitarlas.\n\nUna vez que tengas estos datos, podrás tomar decisiones informadas sobre si ajustar la memoria, crear índices o reescribir la consulta para mejorar el rendimiento.",
+      "duration_seconds": 85.109,
+      "tool_calls": [
+        "run_tests"
+      ],
+      "tool_results": [
+        "exit_code=0\n......ss........................                                         [100%]\n=========================== short test summary info ============================\nSKIPPED [1] tests/test_e2e_llama.py:25: requiere RUN_LIVE_E2E=1 y llama-server local\nSKIPPED [1] tests/test_e2e_llama.py:45: requiere RUN_LIVE_E2E=1 y llama-server local\n30 passed, 2 skipped in 0.39s"
+      ],
+      "error": null,
+      "evaluation": {
+        "concept_groups_met": 4,
+        "concept_groups_total": 5,
+        "missing_concept_groups": [
+          [
+            "memory grant",
+            "concesión de memoria"
+          ]
+        ],
+        "forbidden_claim_hits": [],
+        "deterministic_status": "needs_review",
+        "human_review_required": true
+      }
+    },
+    {
+      "id": "seek-with-lookups",
+      "question": "Un plan usa Index Seek para 500,000 filas seguido de Key Lookup repetido. Explica por qué el Seek puede no ser mejor que un Scan y cómo validarías alternativas.",
+      "answer": "### ¿Por qué un Index Seek puede no ser mejor que un Table Scan?\n\nCuando un plan de ejecución usa **Index Seek** seguido de **Key Lookup** para 500,000 filas, puede ser menos eficiente que un **Table Scan** por las siguientes razones:\n\n1. **Costo de Key Lookup**:\n   - Cada **Key Lookup** implica una operación de búsqueda en la tabla principal (o en el índice clustered) para recuperar columnas no incluidas en el índice no clusterizado.\n   - Si se realizan 500,000 Key Lookups, el costo acumulado puede superar el costo de un escaneo completo de la tabla.\n\n2. **Falta de eficiencia en el uso del índice**:\n   - Si el índice no clusterizado no cubre todas las columnas necesarias (es decir, no es **covering index**), el motor debe realizar Key Lookups.\n   - Esto puede ser más costoso que un escaneo si el índice no es selectivo o si hay muchas filas que coinciden.\n\n3. **Ineficiencia de la estrategia de búsqueda**:\n   - Un **Index Seek** puede ser eficiente si se selecciona un subconjunto pequeño de filas.\n   - Sin embargo, si se deben buscar 500,000 filas, el costo de realizar tantas operaciones de búsqueda y Key Lookup puede ser mayor que un escaneo completo.\n\n4. **Costo de paginación y memoria**:\n   - Aunque no se vean lecturas físicas, el uso de Key Lookups puede provocar un uso intensivo de la memoria caché y una mayor cantidad de operaciones de E/S lógicas.\n\n### Cómo validar alternativas\n\nPara validar si un **Table Scan** o una alternativa es más eficiente, puedes usar las siguientes técnicas:\n\n1. **Ejecutar el plan con `SET STATISTICS IO ON`**:\n   - Esto permite comparar el número de lecturas lógicas y físicas entre el plan actual y uno modificado.\n   - Ejemplo:\n     ```sql\n     SET STATISTICS IO ON;\n     -- Ejecutar consulta\n     ```\n\n2. **Usar `SET STATISTICS TIME ON`**:\n   - Esto permite comparar el tiempo de ejecución real entre diferentes planes.\n\n3. **Comparar planes de ejecución**:\n   - En SQL Server Management Studio (SSMS), puedes usar la opción \"Include Actual Execution Plan\" para ver el plan real y sus métricas.\n   - También puedes usar `sys.dm_exec_query_plan` para obtener el plan de ejecución.\n\n4. **Crear un índice covering**:\n   - Si el índice no clusterizado no cubre todas las columnas necesarias, considera crear un índice que incluya todas las columnas requeridas (índice covering).\n   - Esto puede eliminar las Key Lookups y mejorar el rendimiento.\n\n5. **Revisar las estadísticas**:\n   - Asegúrate de que las estadísticas de los índices estén actualizadas.\n   - Las estadísticas desactualizadas pueden llevar a planes de ejecución ineficientes.\n\n6. **Usar `OPTION (RECOMPILE)` o `OPTION (TABLE HINT)`**:\n   - Estas sugerencias pueden forzar al motor a reconsiderar el plan de ejecución.\n\n### Conclusión\n\nUn **Index Seek** no siempre es más eficiente que un **Table Scan**, especialmente cuando se requiere un gran número de Key Lookups. Validar el rendimiento real con `STATISTICS IO` y `STATISTICS TIME`, y considerar alternativas como índices covering, puede ayudar a identificar el plan más eficiente.",
+      "duration_seconds": 157.034,
+      "tool_calls": [
+        "git_status",
+        "list_files",
+        "read_file",
+        "read_file",
+        "read_file",
+        "run_tests"
+      ],
+      "tool_results": [
+        "## feature/dba-edition\n?? ../evals/\n?? diagnostic_flow.md\n?? plan_explanation.md\n?? proyecto-demo/indice-clustered-vs-nonclustered.md\n?? sql_server_concepts.md\n?? statistics_io_analysis.md\n?? tempdb_investigation.md",
+        "[FILE] diagnostic_flow.md\n[FILE] plan_explanation.md\n[DIR] proyecto-demo\n[FILE] prueba.txt\n[FILE] sql_server_concepts.md\n[FILE] statistics_io_analysis.md\n[FILE] tempdb_investigation.md",
+        "# Distingue Estimated Execution Plan de Actual Execution Plan\n\n## ¿Qué es un Execution Plan?\n\nUn **Execution Plan** en SQL Server es una representación gráfica o textual del plan de ejecución que el motor de base de datos utiliza para ejecutar una consulta. Puede ser de dos tipos:\n\n1. **Estimated Execution Plan**: Es el plan que SQL Server genera antes de ejecutar la consulta, basándose en las estadísticas actuales de las tablas y los índices. Este plan se usa para optimizar la consulta y determinar cómo se ejecutará.\n\n2. **Actual Execution Plan**: Es el plan real que se genera durante la ejecución de la consulta. Este plan muestra cómo se ejecutó realmente la consulta, incluyendo información sobre las filas procesadas, tiempos de ejecución, y otros detalles de rendimiento.\n\n## ¿Por qué SET SHOWPLAN_XML no sustituye un plan real?\n\n`SET SHOWPLAN_XML ON` permite obtener el **Estimated Execution Plan** de una consulta, pero **no puede sustituir** el **Actual Execution Plan** cuando se investigan métricas como filas procesadas y tiempos de ejecución. Esto se debe a las siguientes razones:\n\n1. **Estimación vs. Ejecución Real**:\n   - `SET SHOWPLAN_XML` muestra el plan que SQL Server **espera** ejecutar, basado en estadísticas.\n   - El plan real se genera durante la ejecución, y puede variar significativamente debido a factores como:\n     - Datos reales en las tablas.\n     - Condiciones de bloqueo o concurrencia.\n     - Cambios en las estadísticas de las tablas.\n\n2. **Métricas de Ejecución**:\n   - El **Actual Execution Plan** incluye métricas como:\n     - Número de filas procesadas.\n     - Tiempos de ejecución reales.\n     - Uso de memoria.\n     - Bloqueos y espera.\n   - `SET SHOWPLAN_XML` no proporciona estas métricas, solo el plan de ejecución estimado.\n\n3. **Uso de Herramientas**:\n   - Para obtener el **Actual Execution Plan**, se debe usar:\n     - `SET STATISTICS IO ON` y `SET STATISTICS TIME ON`.\n     - SQL Server Management Studio (SSMS) con la opción \"Include Actual Execution Plan\".\n     - `sys.dm_exec_query_plan` o `sys.dm_exec_sql_text` para obtener planes de ejecución reales.\n\n## Conclusión\n\n`SET SHOWPLAN_XML` es útil para entender cómo se espera que se ejecute una consulta, pero **no puede reemplazar** el plan real cuando se necesita analizar métricas de rendimiento específicas como filas procesadas o tiempos de ejecución. Para eso, se requiere el uso de herramientas que permitan capturar el plan de ejecución real durante la ejecución de la consulta.\n",
+        "# Conceptos de Login, Database User, Authentication y Authorization en SQL Server\n\n## Login\n\nUn **login** en SQL Server es una identidad que permite a un usuario acceder al servidor SQL Server. Es el primer nivel de seguridad y se crea a nivel de servidor. Los logins pueden ser de diferentes tipos:\n\n- **Logins de Windows**: Basados en cuentas de Windows\n- **Logins SQL Server**: Creados específicamente para SQL Server\n- **Logins de Azure AD**: Para integración con Azure Active Directory\n\n## Database User\n\nUn **database user** es una identidad que se asocia con un login y permite acceder a una base de datos específica. Un login puede tener múltiples usuarios en diferentes bases de datos. Los usuarios de base de datos se crean dentro de una base de datos específica.\n\n## Authentication\n\nLa **authentication** (autenticación) es el proceso de verificar la identidad de un usuario. En SQL Server, esto implica:\n\n1. Verificar que el login exista\n2. Validar las credenciales proporcionadas\n3. Establecer la conexión al servidor\n\n## Authorization\n\nLa **authorization** (autorización) es el proceso de determinar qué recursos puede acceder un usuario y qué acciones puede realizar. Esto incluye:\n\n- Permisos a tablas, vistas, procedimientos almacenados\n- Acceso a bases de datos\n- Capacidad de ejecutar ciertos tipos de operaciones\n\n## Principio de Mínimo Privilegio\n\nEl **principio de mínimo privilegio** es una práctica de seguridad fundamental que establece que un usuario debe tener solo los permisos necesarios para realizar sus tareas. En SQL Server:\n\n- Asignar permisos específicos en lugar de roles amplios\n- Revisar regularmente los permisos asignados\n- Eliminar permisos innecesarios\n- Usar roles predefinidos cuando sea posible\n\n## Relación entre Conceptos\n\n1. Un **login** se crea en el servidor SQL Server\n2. Un **database user** se crea dentro de una base de datos específica\n3. El **login** se asocia con el **database user**\n4. La **authentication** verifica la identidad del login\n5. La **authorization** determina qué puede hacer el database user\n\n## Ejemplos Prácticos\n\n### Crear un login:\n```sql\nCREATE LOGIN [mi_usuario] WITH PASSWORD = 'contraseña_segura';\n```\n\n### Crear un database user:\n```sql\nUSE [mi_base_de_datos];\nCREATE USER [mi_usuario] FOR LOGIN [mi_usuario];\n```\n\n### Asignar permisos:\n```sql\nGRANT SELECT, INSERT, UPDATE ON [tabla] TO [mi_usuario];\n```\n\n## Buenas Prácticas\n\n1. Usar logins de Windows cuando sea posible\n2. Implementar el principio de mínimo privilegio\n3. Revisar regularmente los permisos\n4. Usar roles predefinidos para asignar permisos\n5. No otorgar permisos de administrador a usuarios normales",
+        "# Análisis de STATISTICS IO\n\n## Datos proporcionados:\n- Scan count: 1\n- Logical reads: 120000\n- Physical reads: 0\n- Read-ahead reads: 0\n\n## Conclusión posible:\n- El query realizó un solo escaneo (Scan count = 1).\n- Se realizaron 120,000 lecturas lógicas (logical reads), lo cual indica una gran cantidad de páginas de datos leídas desde la memoria caché (buffer pool).\n- No se realizaron lecturas físicas (physical reads = 0), lo que sugiere que todos los datos requeridos estaban en memoria.\n- No se utilizaron read-ahead reads (read-ahead reads = 0), lo que implica que el motor no anticipó la necesidad de cargar páginas adicionales en memoria.\n\n## Conclusión no posible:\n- No se puede determinar si el query fue realizado en una tabla o en un índice.\n- No se puede saber si el query fue realizado en una base de datos en uso o en una base de datos en reposo.\n- No se puede inferir la cantidad de filas afectadas por el query.\n- No se puede determinar si el query fue realizado en un entorno de producción o de desarrollo.\n- No se puede saber si el query fue realizado en un servidor con alta o baja carga de trabajo.\n- No se puede inferir la duración del query o su impacto en el rendimiento del sistema.\n\n## Consideraciones adicionales:\n- El alto número de lecturas lógicas puede indicar un escaneo completo de una tabla grande o un índice no optimizado.\n- La ausencia de lecturas físicas es positiva, ya que indica que no se tuvo que acceder al disco.\n- La ausencia de read-ahead reads puede ser un indicador de que el motor no anticipó la necesidad de cargar más páginas, lo cual puede ser un signo de un plan de ejecución no óptimo.",
+        "exit_code=0\n......ss........................                                         [100%]\n=========================== short test summary info ============================\nSKIPPED [1] tests/test_e2e_llama.py:25: requiere RUN_LIVE_E2E=1 y llama-server local\nSKIPPED [1] tests/test_e2e_llama.py:45: requiere RUN_LIVE_E2E=1 y llama-server local\n30 passed, 2 skipped in 0.40s"
+      ],
+      "error": null,
+      "evaluation": {
+        "concept_groups_met": 5,
+        "concept_groups_total": 5,
+        "missing_concept_groups": [],
+        "forbidden_claim_hits": [],
+        "deterministic_status": "pass",
+        "human_review_required": true
+      }
+    },
+    {
+      "id": "ha-azure-fundamentals",
+      "question": "Distingue brevemente alta disponibilidad de recuperación ante desastres y explica qué cambia conceptualmente al administrar Azure SQL Database frente a SQL Server en una VM, sin inventar SLA.",
+      "answer": "### Alta Disponibilidad vs Recuperación Ante Desastres\n\n**Alta Disponibilidad (HA):**\n- Se enfoca en mantener el servicio operativo durante fallos menores, como fallos de hardware o interrupciones temporales.\n- Incluye mecanismos como réplicas, clústeres y conmutación por error automática.\n- El objetivo es minimizar el tiempo de inactividad (downtime) y garantizar que la aplicación siga funcionando.\n\n**Recuperación Ante Desastres (DR):**\n- Se enfoca en recuperar el sistema tras un desastre mayor, como un desastre natural, fallo en toda una región o pérdida de datos.\n- Incluye copias de seguridad, replicación entre regiones y planes de recuperación.\n- El objetivo es restaurar la funcionalidad del sistema y los datos tras un evento catastrófico.\n\n---\n\n### Diferencias Conceptuales al Administrar Azure SQL Database frente a SQL Server en una VM\n\n| Aspecto | Azure SQL Database | SQL Server en una VM |\n|--------|---------------------|-----------------------|\n| **Gestión** | Servicio administrado; el proveedor gestiona el sistema operativo, actualizaciones, seguridad, etc. | El usuario gestiona el sistema operativo, actualizaciones, seguridad, etc. |\n| **Alta Disponibilidad** | Incluida por defecto con réplicas de disponibilidad (en configuraciones de grupo de disponibilidad). | Requiere configuración manual mediante clústeres de conmutación por error o réplicas de disponibilidad. |\n| **Recuperación ante desastres** | Incluye copias de seguridad automatizadas y replicación geográfica (en configuraciones de réplica secundaria). | Requiere configuración manual de copias de seguridad, replicación geográfica y planes de recuperación. |\n| **SLA** | SLA del 99.95% para bases de datos únicas y 99.99% para grupos de disponibilidad. | SLA depende de la configuración del usuario y del entorno físico. |\n| **Escalabilidad** | Escalabilidad automática y elástica con opciones de rendimiento ajustable. | Escalabilidad manual o mediante configuración de recursos de VM. |\n| **Seguridad** | Incluye protección avanzada contra amenazas, cifrado en reposo y en tránsito, y control de acceso basado en roles. | Requiere configuración manual de seguridad, incluyendo cifrado, control de acceso y protección contra amenazas. |\n\nEn resumen, Azure SQL Database ofrece una gestión simplificada y una disponibilidad y recuperación más robustas por defecto, mientras que SQL Server en una VM ofrece mayor control pero requiere más configuración manual para lograr niveles similares de alta disponibilidad y recuperación ante desastres.",
+      "duration_seconds": 67.783,
+      "tool_calls": [],
+      "tool_results": [],
+      "error": null,
+      "evaluation": {
+        "concept_groups_met": 3,
+        "concept_groups_total": 5,
+        "missing_concept_groups": [
+          [
+            "rpo"
+          ],
+          [
+            "rto"
+          ]
+        ],
+        "forbidden_claim_hits": [],
+        "deterministic_status": "needs_review",
+        "human_review_required": true
+      }
+    }
+  ]
+}

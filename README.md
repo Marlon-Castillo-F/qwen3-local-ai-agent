@@ -1,12 +1,12 @@
-# Agente de IA Local con Qwen3-Coder y llama.cpp
+# Local AI Agent with DBA Specialization
 
 ![Python 3.12](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)
 ![Ubuntu 24.04](https://img.shields.io/badge/Ubuntu-24.04-E95420?logo=ubuntu&logoColor=white)
 ![llama.cpp](https://img.shields.io/badge/Inference-llama.cpp-2F2F2F)
 ![Qwen3-Coder](https://img.shields.io/badge/Model-Qwen3--Coder-615CED)
-![Tests](https://img.shields.io/badge/tests-32%20passed-brightgreen)
+![Tests](https://img.shields.io/badge/tests-64%20passed-brightgreen)
 
-Agente de programación y administración técnica que se ejecuta completamente en una VM Ubuntu Server, sin depender de una API de inferencia en la nube. Integra **Qwen3-Coder 30B**, `llama.cpp` y un agente Python capaz de solicitar herramientas reales, validar cada operación y devolver sus resultados al modelo antes de responder.
+Agente local de programación y administración técnica, especializado en **SQL Server y Database Administration**, que se ejecuta completamente en una VM Ubuntu Server sin depender de una API de inferencia en la nube. Integra **Qwen3-Coder 30B**, `llama.cpp`, recuperación local SQLite FTS5 y herramientas offline capaces de analizar evidencia DBA suministrada dentro de un workspace controlado.
 
 El proyecto demuestra cómo convertir un LLM local en un sistema útil y controlado: inferencia CPU-only, tool calling nativo, aislamiento del workspace, memoria SQLite, pruebas automatizadas y operación persistente con systemd y privilegios mínimos.
 
@@ -17,12 +17,15 @@ El proyecto demuestra cómo convertir un LLM local en un sistema útil y control
 - Tool calling real mediante el formato compatible con OpenAI de `llama-server`.
 - Modelo GGUF local; no se envían conversaciones a una API de inferencia externa.
 - Herramientas seguras para archivos, consultas Git y ejecución controlada de pytest.
+- System prompt DBA versionado fuera del cliente HTTP.
+- RAG local reproducible sobre 13 notas técnicas originales mediante SQLite FTS5.
+- Análisis offline de `STATISTICS IO`, `STATISTICS TIME`, `.sqlplan` y deadlock XML.
 - Workspace restringido con protección contra path traversal y escapes por symlink.
 - Memoria de sesiones en SQLite y logging rotativo.
 - Allowlist de comandos, validación estricta de argumentos y timeouts.
 - `llama-server` administrado por systemd bajo un usuario sin shell y no-root.
 - API limitada a `127.0.0.1:8080`.
-- **32 pruebas aprobadas y 0 fallidas**, incluidas pruebas end-to-end con el modelo real.
+- **64 pruebas aprobadas y 0 fallidas**, incluidas pruebas DBA y end-to-end con el modelo real.
 
 ## Arquitectura
 
@@ -37,7 +40,11 @@ flowchart LR
     R --> F[Herramientas de archivos]
     R --> G[Git: status y diff]
     R --> T[pytest con allowlist]
+    R --> K[search_knowledge<br/>SQLite FTS5]
+    R --> D[Analizadores DBA<br/>offline]
     F --> W[(Workspace restringido)]
+    K --> C[(Corpus SQL Server)]
+    D --> W
     A --> M[(SQLite)]
     A --> L[(Logs)]
     R -->|tool result| A
@@ -54,7 +61,7 @@ El modelo nunca ejecuta código directamente: solo propone una llamada estructur
 | Agente | Python 3.12, Requests |
 | Modelo | Qwen3-Coder-30B-A3B-Instruct, GGUF Q4_K_M |
 | Inferencia | llama.cpp |
-| Persistencia | SQLite |
+| Persistencia y retrieval | SQLite, FTS5 |
 | Operación | systemd, Git |
 | Validación | pytest |
 
@@ -76,6 +83,19 @@ Esta es la configuración del laboratorio, no un requisito rígido. Otros equipo
 - **Referencia usada:** `lmstudio-community/Qwen3-Coder-30B-A3B-Instruct-GGUF:Q4_K_M`.
 
 Se eligió un modelo orientado a código y una cuantización que permite ejecutar aproximadamente 30 mil millones de parámetros en el servidor CPU-only disponible. El archivo GGUF se administra por separado y está excluido de Git.
+
+## DBA Edition 1.1
+
+La especialización no entrena ni modifica los pesos del modelo. No se utilizó fine-tuning, LoRA ni QLoRA. El comportamiento DBA se implementa mediante cuatro capas verificables:
+
+1. **Prompt engineering:** `app/prompts/dba_system.md` define prioridades y principios de diagnóstico basado en evidencia.
+2. **Retrieval augmented generation:** `search_knowledge` consulta un corpus SQL Server autorizado mediante SQLite FTS5, sin descargar un modelo de embeddings.
+3. **Tool calling:** analizadores Python extraen hechos de salidas y archivos DBA; el modelo interpreta esos hechos después.
+4. **Evaluaciones de dominio:** el mismo conjunto de 23 preguntas se ejecuta antes y después de la especialización, preservando respuestas y tiempos reales.
+
+Las herramientas no se conectan a SQL Server, no reciben connection strings y no ejecutan T-SQL. Consulta [DBA Edition](docs/dba-edition.md), [RAG](docs/rag.md), [Herramientas DBA](docs/dba-tools.md) y [Evaluación DBA](docs/dba-evaluation.md).
+
+En la evaluación final de 23 escenarios, los pases deterministas aumentaron de 9 a 14, la cobertura de grupos conceptuales pasó de 83/111 a 102/111 y las coincidencias de afirmaciones prohibidas bajaron de 1 a 0. Estas son métricas heurísticas; la revisión humana encontró errores semánticos que permanecen documentados.
 
 ## Tool calling real
 
@@ -129,11 +149,11 @@ La configuración final usa **24 threads sin NUMA distribute**: ofreció el mejo
 ## Pruebas
 
 ```text
-32 passed in 13.54s
+64 passed in 22.85s
 0 failed
 ```
 
-La suite cubre archivos, seguridad de rutas, symlinks, límites, herramientas no autorizadas, validación de argumentos, timeouts, SQLite, Git, CLI, conexión al servidor y dos ciclos end-to-end reales (`list_files` y `read_file`).
+La suite cubre archivos, seguridad de rutas, symlinks, límites, herramientas no autorizadas, validación de argumentos, timeouts, SQLite, Git, CLI, RAG, parsers DBA, gate de artefactos, conexión al servidor y dos ciclos end-to-end reales (`list_files` y `read_file`).
 
 ```bash
 python -m pytest -q
@@ -155,11 +175,9 @@ Detalles y ejecuciones registradas en [Pruebas](docs/pruebas.md).
 
 ### Agente Python
 
-El repositorio aún no tiene remoto. Sustituye el placeholder cuando exista una URL pública:
-
 ```bash
-git clone <URL_DEL_REPOSITORIO>
-cd ai-agent
+git clone https://github.com/Marlon-Castillo-F/qwen3-local-ai-agent.git
+cd qwen3-local-ai-agent
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -r requirements.txt
@@ -186,11 +204,15 @@ python -m app.main
 | `/help` | Muestra la ayuda disponible |
 | `/history` | Presenta el historial de la sesión actual |
 | `/clear` | Inicia una sesión limpia y reduce el contexto enviado |
+| `/dba` | Muestra el estado real de la especialización DBA |
+| `/knowledge` | Muestra cantidad y categorías indexadas sin consultar al LLM |
 | `/exit` | Cierra el cliente interactivo |
 
 ### Herramientas registradas
 
-`list_files`, `read_file`, `write_file`, `git_status`, `git_diff` y `run_tests`.
+Generales: `list_files`, `read_file`, `write_file`, `git_status`, `git_diff` y `run_tests`.
+
+DBA: `search_knowledge`, `analyze_statistics_io`, `analyze_statistics_time`, `analyze_execution_plan` y `analyze_deadlock_xml`.
 
 ## Estructura del proyecto
 
@@ -205,6 +227,8 @@ ai-agent/
 │   └── tools/
 ├── deploy/
 │   └── llama-server.service
+├── evals/
+├── knowledge/sql-server/
 ├── docs/
 ├── tests/
 ├── workspace/
@@ -228,13 +252,14 @@ Consulta [Decisiones técnicas](docs/decisiones.md) y [Problemas encontrados](do
 - La ejecución CPU-only limita la velocidad y aumenta el tiempo inicial de carga.
 - La censura de secretos es heurística, no una garantía absoluta.
 - El servicio está diseñado para uso local; no debe exponerse directamente a Internet ni presentarse como plataforma enterprise sin una revisión adicional de autenticación, aislamiento y observabilidad.
-- La memoria actual es conversacional y no implementa búsqueda semántica ni RAG.
+- FTS5 realiza recuperación léxica; no aporta similitud semántica mediante embeddings.
+- Los analizadores extraen hechos presentes en archivos, pero no sustituyen SSMS, Query Store, DMVs ni revisión DBA.
+- La evaluación determinística mide conceptos y afirmaciones prohibidas; la calidad global requiere revisión humana.
 
 ## Roadmap — no implementado
 
-- RAG sobre documentos locales.
 - Integración opcional con Obsidian.
-- Nuevas herramientas controladas.
+- Conectores SQL Server de solo lectura con autorización explícita; no implementados en esta versión.
 - Interfaz web.
 - Observabilidad y evaluaciones automáticas ampliadas.
 - Workspaces para múltiples proyectos.

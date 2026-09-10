@@ -15,7 +15,7 @@ class NoopClient:
 
 
 def test_help_contains_required_commands():
-    for command in ("/info", "/clear", "/help", "/history", "/exit"):
+    for command in ("/info", "/clear", "/help", "/history", "/dba", "/knowledge", "/exit"):
         assert command in HELP
 
 
